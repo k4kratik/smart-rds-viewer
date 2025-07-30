@@ -1,0 +1,18 @@
+from fetch import fetch_rds_instances
+from metrics import fetch_storage_metrics
+from pricing import fetch_rds_pricing
+from ui import display_rds_table
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+def main():
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
+        progress.add_task(description="Fetching RDS metadata...", total=None)
+        rds_instances = fetch_rds_instances()
+        progress.add_task(description="Fetching CloudWatch metrics...", total=None)
+        metrics = fetch_storage_metrics(rds_instances)
+        progress.add_task(description="Fetching pricing info...", total=None)
+        pricing = fetch_rds_pricing(rds_instances)
+    display_rds_table(rds_instances, metrics, pricing)
+
+if __name__ == "__main__":
+    main()
