@@ -4,6 +4,8 @@
 
 A powerful, full-screen terminal CLI that fetches and displays all your Amazon RDS instances with live metrics, pricing, and interactive sorting - all from the comfort of your terminal.
 
+![Smart RDS Viewer Demo](image.png)
+
 ## ✨ Features
 
 ### 🔍 **Real-time Data Fetching**
