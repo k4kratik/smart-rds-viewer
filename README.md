@@ -128,16 +128,6 @@ The AI assistant helped transform a simple concept into a comprehensive, product
 
 We welcome contributions! Please feel free to submit issues, feature requests, or pull requests.
 
-### Development Setup
-
-```bash
-# clone the repo
-
-pip install -r requirements.txt
-
-python rds_viewer.py
-```
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
