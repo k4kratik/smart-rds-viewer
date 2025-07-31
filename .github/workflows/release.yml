@@ -1,6 +1,9 @@
 name: Release Build
 
 on:
+  push:
+    branches: [main]
+
   workflow_dispatch:
     inputs:
       bump_type:
@@ -118,12 +121,13 @@ jobs:
         id: next_version
         run: |
           PREVIOUS_TAG="${{ steps.previous_tag.outputs.previous_tag }}"
-          BUMP_TYPE="${{ inputs.bump_type }}"
-          
+          # Use input bump_type if available, otherwise default to patch
+          BUMP_TYPE="${{ inputs.bump_type || 'patch' }}"
+
           # Remove 'v' prefix and split version
           VERSION=${PREVIOUS_TAG#v}
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-          
+
           # Bump version based on type
           case $BUMP_TYPE in
             "major")
@@ -139,10 +143,10 @@ jobs:
               PATCH=$((PATCH + 1))
               ;;
           esac
-          
+
           NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
           echo "next_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "🚀 New version: $NEW_VERSION"
+          echo "🚀 New version: $NEW_VERSION (bump: $BUMP_TYPE)"
 
       - name: Create tag
         run: |
@@ -161,44 +165,36 @@ jobs:
           echo "📁 Current directory contents:"
           ls -la
 
-      - name: Move binaries to root
+      - name: Prepare binaries for release
         run: |
-          # List what we have first
           echo "📁 Current directory structure:"
           find . -name "smart-rds-viewer*" -type f
           echo "📁 Directories:"
           ls -la
-          
-          # Find and move AMD64 binary
-          AMD64_BINARY=$(find . -name "smart-rds-viewer-linux-amd64" -type f | head -1)
-          if [ -n "$AMD64_BINARY" ]; then
-            if [ "$AMD64_BINARY" != "./smart-rds-viewer-linux-amd64" ]; then
-              mv "$AMD64_BINARY" ./smart-rds-viewer-linux-amd64
-              echo "✅ AMD64 binary moved to root"
-            else
-              echo "✅ AMD64 binary already in root"
-            fi
+
+          # Copy binaries to root with unique names to avoid conflicts
+          if [ -f "smart-rds-viewer-linux-amd64/smart-rds-viewer-linux-amd64" ]; then
+            cp "smart-rds-viewer-linux-amd64/smart-rds-viewer-linux-amd64" ./smart-rds-viewer-linux-amd64
+            echo "✅ AMD64 binary copied to root"
+          elif [ -f "smart-rds-viewer-linux-amd64" ]; then
+            echo "✅ AMD64 binary already in root"
           else
             echo "❌ AMD64 binary not found"
             exit 1
           fi
-          
-          # Find and move ARM64 binary
-          ARM64_BINARY=$(find . -name "smart-rds-viewer-linux-arm64" -type f | head -1)
-          if [ -n "$ARM64_BINARY" ]; then
-            if [ "$ARM64_BINARY" != "./smart-rds-viewer-linux-arm64" ]; then
-              mv "$ARM64_BINARY" ./smart-rds-viewer-linux-arm64
-              echo "✅ ARM64 binary moved to root"
-            else
-              echo "✅ ARM64 binary already in root"
-            fi
+
+          if [ -f "smart-rds-viewer-linux-arm64/smart-rds-viewer-linux-arm64" ]; then
+            cp "smart-rds-viewer-linux-arm64/smart-rds-viewer-linux-arm64" ./smart-rds-viewer-linux-arm64
+            echo "✅ ARM64 binary copied to root"
+          elif [ -f "smart-rds-viewer-linux-arm64" ]; then
+            echo "✅ ARM64 binary already in root"
           else
             echo "❌ ARM64 binary not found"
             exit 1
           fi
-          
+
           chmod +x smart-rds-viewer-linux-amd64 smart-rds-viewer-linux-arm64
-          echo "✅ Binaries moved and made executable"
+          echo "✅ Binaries prepared and made executable"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
