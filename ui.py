@@ -24,7 +24,7 @@ def display_rds_table(rds_instances, metrics, pricing):
         {'name': '% Used', 'key': 'used_pct', 'justify': 'right'},
         {'name': 'Free (GiB)', 'key': 'free_gb', 'justify': 'right'},
         {'name': 'IOPS', 'key': 'iops', 'justify': 'right'},
-        {'name': 'EBS Tput', 'key': 'storage_throughput', 'justify': 'right'},
+        {'name': 'EBS Throughput', 'key': 'storage_throughput', 'justify': 'right'},
         {'name': 'Price ($/hr)', 'key': 'price', 'justify': 'right'},
     ]
     

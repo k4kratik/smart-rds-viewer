@@ -49,6 +49,8 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 ### Quick Start
 
+#### Option 1: Run as Python Script
+
 ```bash
 # Clone and setup
 git clone <your-repo>
@@ -63,6 +65,47 @@ pip install -r requirements.txt
 
 # Run the viewer
 python rds_viewer.py
+```
+
+#### Option 2: Build and Run as Binary
+
+```bash
+# Clone and setup
+git clone https://github.com/k4kratik/smart-rds-viewer
+cd smart-rds-viewer
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Build the binary
+python build.py
+# OR use make: make build
+
+# Run the binary
+./dist/smart-rds-viewer
+# OR use make: make run-binary
+```
+
+### Build Commands
+
+```bash
+# Build binary
+make build
+
+# Clean build artifacts
+make clean
+
+# Install dependencies
+make install
+
+# Run Python version
+make run
+
+# Run binary version
+make run-binary
+
+# Show all commands
+make help
 ```
 
 ## 🎯 Usage
@@ -81,16 +124,16 @@ python rds_viewer.py
 
 ### Column Shortcuts (Auto-assigned)
 
-| Key | Column       | Description                       |
-| --- | ------------ | --------------------------------- |
-| `N` | Name         | Instance identifier               |
-| `C` | Class        | Instance type (db.r5.large, etc.) |
-| `S` | Storage (GB) | Allocated storage                 |
-| `%` | % Used       | Storage utilization percentage    |
-| `F` | Free (GiB)   | Available storage space           |
-| `I` | IOPS         | Provisioned IOPS                  |
-| `E` | EBS Tput     | Storage throughput from RDS       |
-| `P` | Price ($/hr) | Live hourly pricing               |
+| Key | Column         | Description                       |
+| --- | -------------- | --------------------------------- |
+| `N` | Name           | Instance identifier               |
+| `C` | Class          | Instance type (db.r5.large, etc.) |
+| `S` | Storage (GB)   | Allocated storage                 |
+| `%` | % Used         | Storage utilization percentage    |
+| `F` | Free (GiB)     | Available storage space           |
+| `I` | IOPS           | Provisioned IOPS                  |
+| `E` | EBS Throughput | Storage throughput from RDS       |
+| `P` | Price ($/hr)   | Live hourly pricing               |
 
 ## 🔧 Technical Details
 
