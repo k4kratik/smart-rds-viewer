@@ -10,14 +10,16 @@ VERSION = ARGV[0] || "1.0.0"
 FORMULA_PATH = "Formula/smart-rds-viewer.rb"
 
 def get_release_assets(version)
-  url = "https://api.github.com/repos/#{REPO}/releases/tags/v#{version}"
+  # Ensure version has v prefix
+  version_with_v = version.start_with?('v') ? version : "v#{version}"
+  url = "https://api.github.com/repos/#{REPO}/releases/tags/#{version_with_v}"
   response = Net::HTTP.get_response(URI(url))
   
   if response.code == "200"
     data = JSON.parse(response.body)
     data["assets"]
   else
-    puts "❌ Failed to get release info for v#{version}"
+    puts "❌ Failed to get release info for #{version_with_v}"
     exit 1
   end
 end
@@ -58,13 +60,15 @@ def update_formula(version, assets)
 end
 
 # Main execution
-puts "🔧 Updating Homebrew formula for v#{VERSION}"
+# Clean version for display (remove v prefix if present)
+display_version = VERSION.start_with?('v') ? VERSION[1..-1] : VERSION
+puts "🔧 Updating Homebrew formula for v#{display_version}"
 
 assets = get_release_assets(VERSION)
 if assets.empty?
-  puts "❌ No assets found in release v#{VERSION}"
+  puts "❌ No assets found in release"
   exit 1
 end
 
-update_formula(VERSION, assets)
+update_formula(display_version, assets)
 puts "🎉 Formula updated successfully!" 

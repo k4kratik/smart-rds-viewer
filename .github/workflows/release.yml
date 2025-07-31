@@ -139,6 +139,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+    outputs:
+      release_version: ${{ steps.next_version.outputs.next_version }}
 
     steps:
       - name: Checkout code
@@ -295,10 +297,11 @@ jobs:
       - name: Get release version
         id: release_version
         run: |
-          # Get the latest tag
-          RELEASE_VERSION=$(git describe --tags --abbrev=0)
-          echo "release_version=${RELEASE_VERSION#v}" >> $GITHUB_OUTPUT
-          echo "📋 Release version: ${RELEASE_VERSION#v}"
+          # Use version from create-release job (remove v prefix if present)
+          RELEASE_VERSION="${{ needs.create-release.outputs.release_version }}"
+          CLEAN_VERSION="${RELEASE_VERSION#v}"
+          echo "release_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+          echo "📋 Release version: $CLEAN_VERSION"
 
       - name: Update Homebrew Formula
         run: |
