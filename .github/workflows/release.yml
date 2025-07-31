@@ -163,9 +163,40 @@ jobs:
 
       - name: Move binaries to root
         run: |
-          # Move binaries from subdirectories to root for easier access
-          mv smart-rds-viewer-linux-amd64/smart-rds-viewer-linux-amd64 ./smart-rds-viewer-linux-amd64
-          mv smart-rds-viewer-linux-arm64/smart-rds-viewer-linux-arm64 ./smart-rds-viewer-linux-arm64
+          # List what we have first
+          echo "📁 Current directory structure:"
+          find . -name "smart-rds-viewer*" -type f
+          echo "📁 Directories:"
+          ls -la
+          
+          # Find and move AMD64 binary
+          AMD64_BINARY=$(find . -name "smart-rds-viewer-linux-amd64" -type f | head -1)
+          if [ -n "$AMD64_BINARY" ]; then
+            if [ "$AMD64_BINARY" != "./smart-rds-viewer-linux-amd64" ]; then
+              mv "$AMD64_BINARY" ./smart-rds-viewer-linux-amd64
+              echo "✅ AMD64 binary moved to root"
+            else
+              echo "✅ AMD64 binary already in root"
+            fi
+          else
+            echo "❌ AMD64 binary not found"
+            exit 1
+          fi
+          
+          # Find and move ARM64 binary
+          ARM64_BINARY=$(find . -name "smart-rds-viewer-linux-arm64" -type f | head -1)
+          if [ -n "$ARM64_BINARY" ]; then
+            if [ "$ARM64_BINARY" != "./smart-rds-viewer-linux-arm64" ]; then
+              mv "$ARM64_BINARY" ./smart-rds-viewer-linux-arm64
+              echo "✅ ARM64 binary moved to root"
+            else
+              echo "✅ ARM64 binary already in root"
+            fi
+          else
+            echo "❌ ARM64 binary not found"
+            exit 1
+          fi
+          
           chmod +x smart-rds-viewer-linux-amd64 smart-rds-viewer-linux-arm64
           echo "✅ Binaries moved and made executable"
 
