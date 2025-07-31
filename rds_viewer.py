@@ -1,10 +1,14 @@
-from fetch import fetch_rds_instances
+import sys
+from fetch import fetch_rds_instances, validate_aws_credentials
 from metrics import fetch_storage_metrics
 from pricing import fetch_rds_pricing
 from ui import display_rds_table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 def main():
+    if not validate_aws_credentials():
+        sys.exit(1)
+
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), transient=True) as progress:
         progress.add_task(description="Fetching RDS metadata...", total=None)
         rds_instances = fetch_rds_instances()
