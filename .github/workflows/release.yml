@@ -95,8 +95,46 @@ jobs:
           name: arm64-binary
           path: dist/smart-rds-viewer-linux-arm64
 
+  build-macos:
+    runs-on: macos-latest
+    outputs:
+      binary-name: ${{ steps.rename.outputs.binary-name }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build binary for macOS
+        run: |
+          export ARCH=macos
+          python build.py
+
+      - name: Rename binary
+        id: rename
+        run: |
+          cd dist
+          mv smart-rds-viewer smart-rds-viewer-macos
+          echo "binary-name=smart-rds-viewer-macos" >> $GITHUB_OUTPUT
+
+      - name: Upload macOS binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-binary
+          path: dist/smart-rds-viewer-macos
+
   create-release:
-    needs: [build-amd64, build-arm64]
+    needs: [build-amd64, build-arm64, build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -193,7 +231,17 @@ jobs:
             exit 1
           fi
 
-          chmod +x smart-rds-viewer-linux-amd64 smart-rds-viewer-linux-arm64
+          if [ -f "macos-binary/smart-rds-viewer-macos" ]; then
+            cp "macos-binary/smart-rds-viewer-macos" ./smart-rds-viewer-macos
+            echo "✅ macOS binary copied to root"
+          elif [ -f "smart-rds-viewer-macos" ]; then
+            echo "✅ macOS binary already in root"
+          else
+            echo "❌ macOS binary not found"
+            exit 1
+          fi
+
+          chmod +x smart-rds-viewer-linux-amd64 smart-rds-viewer-linux-arm64 smart-rds-viewer-macos
           echo "✅ Binaries prepared and made executable"
 
       - name: Create Release
@@ -204,20 +252,24 @@ jobs:
           files: |
             smart-rds-viewer-linux-amd64
             smart-rds-viewer-linux-arm64
+            smart-rds-viewer-macos
           body: |
             ## Smart RDS Viewer ${{ steps.next_version.outputs.next_version }}
 
             ### Downloads
             - **Linux AMD64**: `smart-rds-viewer-linux-amd64`
             - **Linux ARM64**: `smart-rds-viewer-linux-arm64`
+            - **macOS**: `smart-rds-viewer-macos`
 
             ### Usage
             ```bash
-            # Make executable
+            # Linux
             chmod +x smart-rds-viewer-linux-amd64
-
-            # Run
             ./smart-rds-viewer-linux-amd64
+
+            # macOS
+            chmod +x smart-rds-viewer-macos
+            ./smart-rds-viewer-macos
             ```
 
             ### Requirements
