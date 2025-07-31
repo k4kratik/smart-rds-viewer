@@ -244,6 +244,18 @@ jobs:
           chmod +x smart-rds-viewer-linux-amd64 smart-rds-viewer-linux-arm64 smart-rds-viewer-macos
           echo "✅ Binaries prepared and made executable"
 
+      - name: Update Homebrew Formula
+        run: |
+          # Update formula with new version and SHA256 hashes
+          ruby scripts/update-formula.rb ${{ steps.next_version.outputs.next_version }}
+          
+          # Commit and push formula updates
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add Formula/smart-rds-viewer.rb
+          git commit -m "Update formula for ${{ steps.next_version.outputs.next_version }}"
+          git push origin main
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
