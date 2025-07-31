@@ -1,13 +1,14 @@
-from rich.console import Console
+from rich.console import Console, Group
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.live import Live
 from rich import box
-from rich.layout import Layout
 from rich.panel import Panel
 import time
 import readchar
+from readchar import key as rkey
 import os
+import math
 
 console = Console()
 
@@ -57,7 +58,9 @@ def display_rds_table(rds_instances, metrics, pricing):
                     shortcuts[str(i)] = col['key']
     
     sort_state = {'key': 'name', 'ascending': True}
-    show_help = False
+    # Pagination state
+    page_size = 10
+    page_index = 0
 
     def get_rows():
         rows = []
@@ -114,21 +117,33 @@ def display_rds_table(rds_instances, metrics, pricing):
             help_text += f"  [bold]{key}[/bold] = {col_name}\n"
         help_text += "\n[bold cyan]Other Commands:[/bold cyan]\n"
         help_text += "  [bold]q[/bold] = Quit\n"
-        help_text += "  [bold]?[/bold] = Toggle this help\n"
-        help_text += "  [bold]Ctrl+C[/bold] = Quit\n"
+        help_text += "  [bold]←[/bold] or [bold]Left Arrow[/bold]  = Previous page\n"
+        help_text += "  [bold]→[/bold] or [bold]Right Arrow[/bold] = Next page\n"
         return Panel(help_text, title="Help", border_style="cyan")
 
     def render_table():
-        table = Table(title="Amazon RDS Instances", box=box.SIMPLE_HEAVY)
+        # Prepare sorted rows and pagination
+        rows = sort_rows(get_rows())
+        total_pages = math.ceil(len(rows) / page_size) if rows else 1
+        # Slice rows for current page
+        start = page_index * page_size
+        end = start + page_size
+        display_rows = rows[start:end]
+        # Create table with serial number column
+        title = f"Amazon RDS Instances (Page {page_index+1}/{total_pages})"
+        table = Table(title=title, box=box.SIMPLE_HEAVY)
+        table.add_column("S.No.", justify="right")
         
         # Add columns dynamically
         for col in columns:
             table.add_column(col['name'], justify=col['justify'], style="bold" if col['key'] == 'name' else "")
         
-        rows = sort_rows(get_rows())
-        for row in rows:
+        # Add data rows with serial numbers
+        for idx, row in enumerate(display_rows):
             style = "red" if row['used_pct'] is not None and row['used_pct'] >= 80 else ""
+            sno = start + idx + 1
             table.add_row(
+                f"{sno}.",
                 str(row['name']),
                 str(row['class']),
                 str(row['storage']),
@@ -142,24 +157,10 @@ def display_rds_table(rds_instances, metrics, pricing):
         return table
 
     def render_layout():
-        layout = Layout()
-        layout.split_column(
-            Layout(name="main", ratio=3),
-            Layout(name="help", ratio=1)
-        )
-        
-        # Main content (table)
+        # Render the table followed by the help panel
         table = render_table()
-        layout["main"].update(table)
-        
-        # Help panel (shown/hidden based on show_help)
-        if show_help:
-            help_panel = create_help_panel()
-            layout["help"].update(help_panel)
-        else:
-            layout["help"].update("")
-        
-        return layout
+        help_panel = create_help_panel()
+        return Group(table, help_panel)
 
     # Clear terminal and show loading
     clear_terminal()
@@ -167,23 +168,36 @@ def display_rds_table(rds_instances, metrics, pricing):
         progress.add_task(description="Fetching and processing RDS data...", total=None)
         time.sleep(0.5)  # Simulate loading
 
-    # Interactive table with full screen
+    # Interactive table with pagination and full screen
     with Live(render_layout(), refresh_per_second=4, console=console, screen=True) as live:
-        console.print("\nPress [bold]?[/bold] for help, [bold]q[/bold] to quit.")
+        console.print("\nPress [bold]q[/bold] to quit. Use [bold]←[/bold] / [bold]→[/bold] to change pages, or press the column key to sort.")
         while True:
             try:
-                key = readchar.readkey().lower()
-                if key in ['q', '\x03']:  # q or Ctrl+C
+                key = readchar.readkey()
+                # Quit
+                if key == '\x03' or key.lower() == 'q':
                     clear_terminal()
                     return
-                elif key == '?':
-                    show_help = not show_help  # Toggle help
-                    live.update(render_layout())
-                elif key in shortcuts:
-                    if sort_state['key'] == shortcuts[key]:
+                # Next page
+                if key == rkey.RIGHT:
+                    total = math.ceil(len(sort_rows(get_rows())) / page_size)
+                    if page_index < total - 1:
+                        page_index += 1
+                        live.update(render_layout())
+                    continue
+                # Previous page
+                if key == rkey.LEFT:
+                    if page_index > 0:
+                        page_index -= 1
+                        live.update(render_layout())
+                    continue
+                # Sorting shortcuts
+                sk = key.lower()
+                if sk in shortcuts:
+                    if sort_state['key'] == shortcuts[sk]:
                         sort_state['ascending'] = not sort_state['ascending']
                     else:
-                        sort_state['key'] = shortcuts[key]
+                        sort_state['key'] = shortcuts[sk]
                         sort_state['ascending'] = True
                     live.update(render_layout())
             except KeyboardInterrupt:

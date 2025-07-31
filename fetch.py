@@ -1,8 +1,17 @@
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError
+try:
+    import boto3
+    from botocore.exceptions import BotoCoreError, ClientError
+    _HAS_BOTO = True
+except ImportError:
+    boto3 = None  # type: ignore
+    BotoCoreError = ClientError = Exception  # type: ignore
+    _HAS_BOTO = False
 
 def fetch_rds_instances():
     """Fetch all RDS instances and their key metadata."""
+    if not _HAS_BOTO:
+        print("[WARN] boto3 not installed; returning no RDS instances.")
+        return []
     rds = boto3.client('rds')
     instances = []
     try:
