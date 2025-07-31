@@ -53,7 +53,7 @@ jobs:
       - name: Upload AMD64 binary
         uses: actions/upload-artifact@v4
         with:
-          name: smart-rds-viewer-linux-amd64
+          name: amd64-binary
           path: dist/smart-rds-viewer-linux-amd64
 
   build-arm64:
@@ -92,7 +92,7 @@ jobs:
       - name: Upload ARM64 binary
         uses: actions/upload-artifact@v4
         with:
-          name: smart-rds-viewer-linux-arm64
+          name: arm64-binary
           path: dist/smart-rds-viewer-linux-arm64
 
   create-release:
@@ -172,9 +172,9 @@ jobs:
           echo "📁 Directories:"
           ls -la
 
-          # Copy binaries to root with unique names to avoid conflicts
-          if [ -f "smart-rds-viewer-linux-amd64/smart-rds-viewer-linux-amd64" ]; then
-            cp "smart-rds-viewer-linux-amd64/smart-rds-viewer-linux-amd64" ./smart-rds-viewer-linux-amd64
+          # Copy binaries from artifact directories to root
+          if [ -f "amd64-binary/smart-rds-viewer-linux-amd64" ]; then
+            cp "amd64-binary/smart-rds-viewer-linux-amd64" ./smart-rds-viewer-linux-amd64
             echo "✅ AMD64 binary copied to root"
           elif [ -f "smart-rds-viewer-linux-amd64" ]; then
             echo "✅ AMD64 binary already in root"
@@ -183,8 +183,8 @@ jobs:
             exit 1
           fi
 
-          if [ -f "smart-rds-viewer-linux-arm64/smart-rds-viewer-linux-arm64" ]; then
-            cp "smart-rds-viewer-linux-arm64/smart-rds-viewer-linux-arm64" ./smart-rds-viewer-linux-arm64
+          if [ -f "arm64-binary/smart-rds-viewer-linux-arm64" ]; then
+            cp "arm64-binary/smart-rds-viewer-linux-arm64" ./smart-rds-viewer-linux-arm64
             echo "✅ ARM64 binary copied to root"
           elif [ -f "smart-rds-viewer-linux-arm64" ]; then
             echo "✅ ARM64 binary already in root"
