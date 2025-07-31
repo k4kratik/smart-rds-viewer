@@ -1,0 +1,41 @@
+name: Test Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Test build
+        run: |
+          python build.py
+
+      - name: Verify binary exists
+        run: |
+          ls -la dist/
+          if [ -f "dist/smart-rds-viewer" ]; then
+            echo "✅ Binary built successfully"
+            echo "📏 Binary size: $(du -h dist/smart-rds-viewer | cut -f1)"
+          else
+            echo "❌ Binary not found"
+            exit 1
+          fi
