@@ -1,4 +1,9 @@
-import boto3
+try:
+    import boto3
+    _HAS_BOTO = True
+except ImportError:
+    boto3 = None  # type: ignore
+    _HAS_BOTO = False
 import json
 import os
 import time
@@ -65,6 +70,10 @@ def save_cached_pricing(prices):
 
 def fetch_rds_pricing(rds_instances):
     """Fetch live on-demand hourly pricing for each RDS instance type with caching."""
+    # If boto3 not available, return empty pricing
+    if not _HAS_BOTO:
+        print("[WARN] boto3 not installed; returning empty pricing.")
+        return {}
     # Try to load from cache first
     cached_prices = load_cached_pricing()
     if cached_prices is not None:

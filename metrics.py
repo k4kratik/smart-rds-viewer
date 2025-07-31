@@ -1,8 +1,16 @@
-import boto3
+try:
+    import boto3
+    _HAS_BOTO = True
+except ImportError:
+    boto3 = None  # type: ignore
+    _HAS_BOTO = False
 from datetime import datetime, timedelta
 
 def fetch_storage_metrics(rds_instances):
     """Fetch FreeStorageSpace metric for each RDS instance from CloudWatch."""
+    if not _HAS_BOTO:
+        print("[WARN] boto3 not installed; returning empty metrics.")
+        return {}
     cloudwatch = boto3.client('cloudwatch')
     metrics = {}
     end_time = datetime.utcnow()
