@@ -116,6 +116,21 @@ jobs:
       - name: Download binaries
         uses: actions/download-artifact@v4
 
+      - name: List downloaded files
+        run: |
+          echo "📁 Downloaded artifacts:"
+          find . -name "smart-rds-viewer*" -type f
+          echo "📁 Current directory contents:"
+          ls -la
+
+      - name: Move binaries to root
+        run: |
+          # Move binaries from subdirectories to root for easier access
+          mv smart-rds-viewer-linux-amd64/smart-rds-viewer-linux-amd64 ./smart-rds-viewer-linux-amd64
+          mv smart-rds-viewer-linux-arm64/smart-rds-viewer-linux-arm64 ./smart-rds-viewer-linux-arm64
+          chmod +x smart-rds-viewer-linux-amd64 smart-rds-viewer-linux-arm64
+          echo "✅ Binaries moved and made executable"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
