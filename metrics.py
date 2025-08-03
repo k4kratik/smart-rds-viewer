@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 def fetch_storage_metrics(rds_instances):
     """Fetch FreeStorageSpace metric for each RDS instance from CloudWatch."""
-    cloudwatch = boto3.client('cloudwatch')
+    cloudwatch = boto3.client('cloudwatch', region_name='ap-south-1')
     metrics = {}
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(hours=1)

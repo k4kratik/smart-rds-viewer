@@ -25,7 +25,10 @@ def display_rds_table(rds_instances, metrics, pricing):
         {'name': 'Free (GiB)', 'key': 'free_gb', 'justify': 'right'},
         {'name': 'IOPS', 'key': 'iops', 'justify': 'right'},
         {'name': 'EBS Throughput', 'key': 'storage_throughput', 'justify': 'right'},
-        {'name': 'Price ($/hr)', 'key': 'price', 'justify': 'right'},
+        {'name': 'Instance ($/hr)', 'key': 'instance_price', 'justify': 'right'},
+        {'name': 'Storage ($/hr)', 'key': 'storage_price', 'justify': 'right'},
+        {'name': 'IOPS ($/hr)', 'key': 'iops_price', 'justify': 'right'},
+        {'name': 'Total ($/hr)', 'key': 'total_price', 'justify': 'right'},
     ]
     
     # Auto-assign shortcuts: first letter of each column name
@@ -67,7 +70,7 @@ def display_rds_table(rds_instances, metrics, pricing):
             storage = inst['AllocatedStorage']
             iops = inst.get('Iops')
             storage_throughput = inst.get('StorageThroughput')
-            price = pricing.get((klass, inst['Region'], inst['Engine']))
+            price_info = pricing.get((klass, inst['Region'], inst['Engine']))
             free = metrics.get(name)
             if free is not None and storage:
                 used_pct = 100 - (free / (storage * 1024**3) * 100)
@@ -75,6 +78,24 @@ def display_rds_table(rds_instances, metrics, pricing):
             else:
                 used_pct = None
                 free_gb = None
+
+            # Extract price components
+            instance_price = None
+            storage_price = None
+            iops_price = None
+            total_price = None
+            
+            if price_info is not None:
+                if isinstance(price_info, dict):
+                    instance_price = price_info.get('instance')
+                    storage_price = price_info.get('storage')
+                    iops_price = price_info.get('iops')
+                    total_price = price_info.get('total')
+                else:
+                    # Handle legacy format where price_info was just the instance price
+                    instance_price = price_info
+                    total_price = price_info
+
             rows.append({
                 'name': name,
                 'class': klass,
@@ -83,7 +104,10 @@ def display_rds_table(rds_instances, metrics, pricing):
                 'free_gb': free_gb,
                 'iops': iops,
                 'storage_throughput': storage_throughput,
-                'price': price,
+                'instance_price': instance_price,
+                'storage_price': storage_price,
+                'iops_price': iops_price,
+                'total_price': total_price,
             })
         return rows
 
@@ -100,7 +124,10 @@ def display_rds_table(rds_instances, metrics, pricing):
             'free_gb': lambda r: (r['free_gb'] if r['free_gb'] is not None else 0),
             'iops': lambda r: (r['iops'] if r['iops'] is not None else 0),
             'storage_throughput': lambda r: (r['storage_throughput'] if r['storage_throughput'] is not None else 0),
-            'price': lambda r: (r['price'] if r['price'] is not None else float('inf')),
+            'instance_price': lambda r: (r['instance_price'] if r['instance_price'] is not None else float('inf')),
+            'storage_price': lambda r: (r['storage_price'] if r['storage_price'] is not None else float('inf')),
+            'iops_price': lambda r: (r['iops_price'] if r['iops_price'] is not None else float('inf')),
+            'total_price': lambda r: (r['total_price'] if r['total_price'] is not None else float('inf')),
         }
         
         keyfunc = sort_funcs.get(k, lambda r: r['name'] or '')
@@ -136,7 +163,10 @@ def display_rds_table(rds_instances, metrics, pricing):
                 f"{row['free_gb']:.1f}" if row['free_gb'] is not None else "?",
                 str(row['iops']) if row['iops'] is not None else "-",
                 str(row['storage_throughput']) if row['storage_throughput'] is not None else "-",
-                f"${row['price']:.4f}" if row['price'] is not None else "?",
+                f"${row['instance_price']:.4f}" if row['instance_price'] is not None else "?",
+                f"${row['storage_price']:.4f}" if row['storage_price'] is not None else "?",
+                f"${row['iops_price']:.4f}" if row['iops_price'] is not None else "?",
+                f"${row['total_price']:.4f}" if row['total_price'] is not None else "?",
                 style=style
             )
         return table

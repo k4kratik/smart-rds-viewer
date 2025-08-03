@@ -3,46 +3,51 @@ import json
 import os
 import time
 from datetime import datetime, timedelta
+from typing import Dict, List
 
 # Cache configuration
 CACHE_FILE = "/tmp/rds_pricing_cache.json"
 CACHE_DURATION_HOURS = 24  # Cache for 24 hours
 
+
 def tuple_to_key(tuple_key):
     """Convert tuple key to string for JSON serialization."""
     return f"{tuple_key[0]}|{tuple_key[1]}|{tuple_key[2]}"
+
 
 def key_to_tuple(string_key):
     """Convert string key back to tuple for internal use."""
     parts = string_key.split("|")
     return (parts[0], parts[1], parts[2])
 
+
 def load_cached_pricing():
     """Load pricing data from cache if it exists and is valid."""
     try:
         if not os.path.exists(CACHE_FILE):
             return None
-        
-        with open(CACHE_FILE, 'r') as f:
+
+        with open(CACHE_FILE, "r") as f:
             cache_data = json.load(f)
-        
+
         # Check if cache is still valid
-        cache_time = datetime.fromisoformat(cache_data['timestamp'])
+        cache_time = datetime.fromisoformat(cache_data["timestamp"])
         if datetime.now() - cache_time > timedelta(hours=CACHE_DURATION_HOURS):
             print("[INFO] Pricing cache expired, fetching fresh data...")
             return None
-        
+
         # Convert string keys back to tuples
         prices = {}
-        for string_key, price in cache_data['prices'].items():
+        for string_key, price in cache_data["prices"].items():
             tuple_key = key_to_tuple(string_key)
             prices[tuple_key] = price
-        
+
         print("[INFO] Using cached pricing data...")
         return prices
     except Exception as e:
         print(f"[WARN] Error loading cache: {e}")
         return None
+
 
 def save_cached_pricing(prices):
     """Save pricing data to cache."""
@@ -52,16 +57,265 @@ def save_cached_pricing(prices):
         for tuple_key, price in prices.items():
             string_key = tuple_to_key(tuple_key)
             serializable_prices[string_key] = price
-        
+
         cache_data = {
-            'timestamp': datetime.now().isoformat(),
-            'prices': serializable_prices
+            "timestamp": datetime.now().isoformat(),
+            "prices": serializable_prices,
         }
-        with open(CACHE_FILE, 'w') as f:
+        with open(CACHE_FILE, "w") as f:
             json.dump(cache_data, f, indent=2)
         print("[INFO] Pricing data cached successfully.")
     except Exception as e:
         print(f"[WARN] Error saving cache: {e}")
+
+
+def get_rds_pricing_data(region: str = "ap-south-1", engine: str = "MySQL", filters: List[Dict] = None) -> List[Dict]:
+    """
+    Fetch RDS pricing information based on provided filters.
+    Returns raw pricing data that includes all components (storage, IOPS, throughput, etc.)
+    for different storage types (gp3, io1, io2, etc.) and deployment modes.
+    
+    Args:
+        region: AWS region code (e.g., ap-south-1)
+        engine: Database engine (e.g., MySQL, PostgreSQL)
+        filters: Additional filters to apply to the pricing API query
+    """
+    # Pricing API only works in us-east-1
+    client = boto3.client("pricing", region_name="us-east-1")
+    
+    # Base filters
+    base_filters = [
+        {"Type": "TERM_MATCH", "Field": "regionCode", "Value": region},
+        {"Type": "TERM_MATCH", "Field": "databaseEngine", "Value": engine},
+    ]
+    
+    # Combine with additional filters if provided
+    if filters:
+        base_filters.extend(filters)
+
+    pricing_data = []
+    next_token = None
+
+    while True:
+        # Build request parameters
+        params = {
+            "ServiceCode": "AmazonRDS",
+            "Filters": base_filters,
+            "MaxResults": 100
+        }
+        if next_token:
+            params["NextToken"] = next_token
+
+        # Make API call
+        response = client.get_products(**params)
+        
+        # Process current page
+        for product_json in response["PriceList"]:
+            product = json.loads(product_json)
+            attributes = product.get("product", {}).get("attributes", {})
+            usage_type = attributes.get("usagetype", "").lower()
+            
+            # Get all pricing terms
+            terms = product.get("terms", {}).get("OnDemand", {})
+            for term_data in terms.values():
+                for price_dim in term_data.get("priceDimensions", {}).values():
+                    price_info = {
+                        "Description": price_dim.get("description"),
+                        "UsageType": usage_type,
+                        "Price (USD)": price_dim["pricePerUnit"].get("USD", "N/A"),
+                        "Unit": price_dim.get("unit", ""),
+                        # Include additional attributes that might be useful
+                        "StorageType": attributes.get("volumeType", ""),
+                        "DeploymentOption": attributes.get("deploymentOption", ""),
+                        "Engine": attributes.get("databaseEngine", ""),
+                        "Region": attributes.get("regionCode", ""),
+                        "InstanceType": attributes.get("instanceType", ""),
+                    }
+                    pricing_data.append(price_info)
+
+        # Check for more pages
+        next_token = response.get("NextToken")
+        if not next_token:
+            break
+
+    return pricing_data
+
+
+def parse_pricing_components(pricing_data, instance_class, storage_type, allocated_storage, iops):
+    """Parse pricing data to extract instance, storage, and IOPS costs."""
+    instance_price = 0
+    storage_price_per_gb = 0
+    iops_price_per_iop = 0
+    storage_cost_monthly = 0
+    iops_cost_monthly = 0
+    
+    print(f"[DEBUG] Parsing pricing for {instance_class}, storage: {storage_type}, allocated: {allocated_storage}GB, IOPS: {iops}")
+    print(f"[DEBUG] Total pricing items to examine: {len(pricing_data)}")
+    
+    for i, item in enumerate(pricing_data):
+        description = item.get("Description", "").lower()
+        usage_type = item.get("UsageType", "").lower()
+        price_str = item.get("Price (USD)", "0")
+        unit = item.get("Unit", "").lower()
+        item_instance_type = item.get("InstanceType", "")
+        item_storage_type = item.get("StorageType", "")
+        
+        # Debug: Print first few items to understand the data structure
+        if i < 5:
+            print(f"[DEBUG] Item {i}: Description='{item.get('Description', '')}', "
+                  f"UsageType='{item.get('UsageType', '')}', "
+                  f"Price='{price_str}', Unit='{item.get('Unit', '')}', "
+                  f"InstanceType='{item_instance_type}', "
+                  f"StorageType='{item_storage_type}'")
+        
+        # Skip if price is not available
+        if price_str == "N/A" or not price_str:
+            continue
+            
+        try:
+            price = float(price_str)
+        except ValueError:
+            continue
+        
+        if price <= 0:
+            continue
+        
+        # Instance pricing (hourly) - be more flexible with matching
+        if (item_instance_type == instance_class and 
+            ("hour" in unit or "hrs" in unit)):
+            instance_price = price
+            print(f"[DEBUG] Found instance price: ${price}/hr for {instance_class}")
+        
+        # Storage pricing (monthly per GB) - be more flexible
+        elif (("storage" in description or storage_type.lower() in description) and
+              "gb" in unit and "month" in unit and
+              (not item_storage_type or item_storage_type.lower() == storage_type.lower())):
+            storage_price_per_gb = price
+            storage_cost_monthly = storage_price_per_gb * allocated_storage
+            print(f"[DEBUG] Found storage price: ${price}/GB-month for {storage_type}")
+        
+        # IOPS pricing (monthly per IOPS) - be more flexible
+        elif (("iops" in description or "piops" in usage_type or "provisioned" in description) and
+              ("iops" in unit or "provisioned" in unit) and "month" in unit):
+            iops_price_per_iop = price
+            if iops and iops > 0:
+                iops_cost_monthly = iops_price_per_iop * iops
+            print(f"[DEBUG] Found IOPS price: ${price}/IOPS-month")
+    
+    print(f"[DEBUG] Final prices - Instance: ${instance_price}, Storage: ${storage_cost_monthly/730:.4f}/hr, IOPS: ${iops_cost_monthly/730:.4f}/hr")
+    
+    return {
+        "instance": instance_price,  # Already hourly
+        "storage": storage_cost_monthly / 730 if storage_cost_monthly > 0 else 0,  # Convert monthly to hourly
+        "iops": iops_cost_monthly / 730 if iops_cost_monthly > 0 else 0,  # Convert monthly to hourly
+        "total": instance_price + (storage_cost_monthly / 730) + (iops_cost_monthly / 730)
+    }
+
+
+def parse_pricing_components_v2(instance_data, storage_data, iops_data, instance_class, storage_type, allocated_storage, iops):
+    """Parse pricing data from separate datasets for instance, storage, and IOPS costs."""
+    instance_price = 0
+    storage_cost_monthly = 0
+    iops_cost_monthly = 0
+    
+    # Parse instance pricing
+    for item in instance_data:
+        item_instance_type = item.get("InstanceType", "")
+        price_str = item.get("Price (USD)", "0")
+        unit = item.get("Unit", "").lower()
+        
+        if (item_instance_type == instance_class and 
+            ("hour" in unit or "hrs" in unit) and
+            price_str != "N/A" and price_str):
+            try:
+                price = float(price_str)
+                if price > 0:
+                    instance_price = price
+                    break
+            except ValueError:
+                continue
+    
+    # Parse storage pricing
+    # Map our storage types to AWS storage type names
+    storage_type_map = {
+        "gp3": "General Purpose-GP3",
+        "gp2": "General Purpose",
+        "io1": "Provisioned IOPS",
+        "io2": "Provisioned IOPS-IO2",
+        "magnetic": "Magnetic"
+    }
+    
+    target_storage_type = storage_type_map.get(storage_type.lower(), storage_type)
+    
+    for item in storage_data:
+        description = item.get("Description", "").lower()
+        price_str = item.get("Price (USD)", "0")
+        unit = item.get("Unit", "")
+        item_storage_type = item.get("StorageType", "")
+        usage_type = item.get("UsageType", "").lower()
+        
+        # Look for Single-AZ storage (avoid Multi-AZ unless specified)
+        is_single_az = "multi-az" not in usage_type and "multi-azcluster" not in usage_type
+        
+        # Match by StorageType field first (more reliable)
+        if (item_storage_type == target_storage_type and
+            unit == "GB-Mo" and is_single_az and
+            price_str != "N/A" and price_str):
+            try:
+                price = float(price_str)
+                if price > 0:
+                    storage_cost_monthly = price * allocated_storage
+                    break
+            except ValueError:
+                continue
+        
+        # Fallback: match by description for storage type in description
+        elif (storage_type.lower() in description and
+              unit == "GB-Mo" and is_single_az and
+              price_str != "N/A" and price_str):
+            try:
+                price = float(price_str)
+                if price > 0:
+                    storage_cost_monthly = price * allocated_storage
+                    break
+            except ValueError:
+                continue
+    
+    # Parse IOPS pricing
+    if iops and iops > 0:
+        for item in iops_data:
+            description = item.get("Description", "").lower()
+            usage_type = item.get("UsageType", "").lower()
+            price_str = item.get("Price (USD)", "0")
+            unit = item.get("Unit", "")
+            
+            # Look for Single-AZ IOPS (avoid Multi-AZ unless specified)
+            is_single_az = "multi-az" not in usage_type and "multi-azcluster" not in usage_type
+            
+            # Match IOPS pricing for the storage type we're using
+            is_matching_storage = False
+            if storage_type.lower() == "gp3" and "gp3" in usage_type:
+                is_matching_storage = True
+            elif storage_type.lower() in ["io1", "io2"] and ("piops" in usage_type or "io1" in usage_type or "io2" in usage_type):
+                is_matching_storage = True
+            
+            if (unit == "IOPS-Mo" and is_single_az and is_matching_storage and
+                price_str != "N/A" and price_str):
+                try:
+                    price = float(price_str)
+                    if price > 0:
+                        iops_cost_monthly = price * iops
+                        break
+                except ValueError:
+                    continue
+    
+    return {
+        "instance": instance_price,  # Already hourly
+        "storage": storage_cost_monthly / 730 if storage_cost_monthly > 0 else 0,  # Convert monthly to hourly
+        "iops": iops_cost_monthly / 730 if iops_cost_monthly > 0 else 0,  # Convert monthly to hourly
+        "total": instance_price + (storage_cost_monthly / 730) + (iops_cost_monthly / 730)
+    }
+
 
 def fetch_rds_pricing(rds_instances):
     """Fetch live on-demand hourly pricing for each RDS instance type with caching."""
@@ -69,50 +323,72 @@ def fetch_rds_pricing(rds_instances):
     cached_prices = load_cached_pricing()
     if cached_prices is not None:
         return cached_prices
-    
+
     # Fetch fresh data from AWS
     print("[INFO] Fetching fresh pricing data from AWS...")
-    pricing = boto3.client('pricing', region_name='us-east-1')
     prices = {}
     
+    # Group instances by region and engine to minimize API calls
+    region_engine_groups = {}
     for inst in rds_instances:
-        instance_class = inst['DBInstanceClass']
-        region = inst['Region']
-        engine = inst['Engine']
-        # Try with minimal filters first
-        filters = [
-            {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_class},
-            {'Type': 'TERM_MATCH', 'Field': 'regionCode', 'Value': region},
-        ]
-        # Optionally add engine filter if you want
-        # filters.append({'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': engine})
-        try:
-            resp = pricing.get_products(
-                ServiceCode='AmazonRDS',
-                Filters=filters,
-                MaxResults=5
-            )
-            price = None
-            for p in resp['PriceList']:
-                data = json.loads(p)
-                terms = data.get('terms', {}).get('OnDemand', {})
-                for term in terms.values():
-                    for price_dim in term['priceDimensions'].values():
-                        price_str = price_dim['pricePerUnit'].get('USD')
-                        if price_str:
-                            price = float(price_str)
-                            break
-                    if price is not None:
-                        break
-                if price is not None:
-                    break
-            prices[(instance_class, region, engine)] = price
-            if price is None:
-                print(f"[WARN] No price found for {instance_class} in {region} (engine: {engine})")
-        except Exception as e:
-            print(f"[ERROR] Pricing API failed for {instance_class} in {region}: {e}")
-            prices[(instance_class, region, engine)] = None
+        region = inst["Region"]
+        engine = inst["Engine"]
+        key = (region, engine)
+        if key not in region_engine_groups:
+            region_engine_groups[key] = []
+        region_engine_groups[key].append(inst)
     
+    # Fetch pricing data for each region/engine combination
+    for (region, engine), instances in region_engine_groups.items():
+        print(f"[INFO] Fetching pricing for {engine} in {region}...")
+        
+        try:
+            # Get instance pricing data for this region/engine
+            instance_pricing_data = get_rds_pricing_data(region=region, engine=engine)
+            
+            # Get storage pricing data (separate API call)
+            storage_pricing_data = get_rds_pricing_data(
+                region=region, 
+                engine=engine,
+                filters=[{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Database Storage"}]
+            )
+            
+            # Get IOPS pricing data (separate API call)
+            iops_pricing_data = get_rds_pricing_data(
+                region=region,
+                engine=engine, 
+                filters=[{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Provisioned IOPS"}]
+            )
+            
+            if not instance_pricing_data:
+                print(f"[WARN] No instance pricing data found for {engine} in {region}")
+                for inst in instances:
+                    prices[(inst["DBInstanceClass"], region, engine)] = None
+                continue
+            
+            # Process each instance in this group
+            for inst in instances:
+                instance_class = inst["DBInstanceClass"]
+                storage_type = inst.get("StorageType", "gp3")
+                allocated_storage = inst.get("AllocatedStorage", 0)
+                iops = inst.get("Iops", 0)
+                
+                # Parse pricing components using separate datasets
+                price_breakdown = parse_pricing_components_v2(
+                    instance_pricing_data, storage_pricing_data, iops_pricing_data,
+                    instance_class, storage_type, allocated_storage, iops
+                )
+                
+                prices[(instance_class, region, engine)] = price_breakdown
+                
+                if price_breakdown["total"] == 0:
+                    print(f"[WARN] No price found for {instance_class} in {region} (engine: {engine})")
+                    
+        except Exception as e:
+            print(f"[ERROR] Pricing API failed for {engine} in {region}: {e}")
+            for inst in instances:
+                prices[(inst["DBInstanceClass"], region, engine)] = None
+
     # Save to cache
     save_cached_pricing(prices)
     return prices
