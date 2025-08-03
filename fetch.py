@@ -19,7 +19,7 @@ def validate_aws_credentials():
 
 def fetch_rds_instances():
     """Fetch all RDS instances and their key metadata."""
-    rds = boto3.client('rds')
+    rds = boto3.client('rds', region_name='ap-south-1')
     instances = []
     try:
         paginator = rds.get_paginator('describe_db_instances')
