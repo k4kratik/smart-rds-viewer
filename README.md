@@ -72,47 +72,6 @@ pip install -r requirements.txt
 python rds_viewer.py
 ```
 
-#### Option 2: Build and Run as Binary
-
-```bash
-# Clone and setup
-git clone https://github.com/k4kratik/smart-rds-viewer
-cd smart-rds-viewer
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Build the binary
-python build.py
-# OR use make: make build
-
-# Run the binary
-./dist/smart-rds-viewer
-# OR use make: make run-binary
-```
-
-### Build Commands
-
-```bash
-# Build binary
-make build
-
-# Clean build artifacts
-make clean
-
-# Install dependencies
-make install
-
-# Run Python version
-make run
-
-# Run binary version
-make run-binary
-
-# Show all commands
-make help
-```
-
 ## 🎯 Usage
 
 ### Basic Usage
@@ -134,20 +93,20 @@ python rds_viewer.py --nocache
 
 ### Column Shortcuts (Auto-assigned, match table order)
 
-| Key | Column                | Description                         |
-| --- | --------------------- | ----------------------------------- |
-| `n` | Name                  | Instance identifier (👥 = Multi-AZ) |
-| `c` | Class                 | Instance type (db.r5.large, etc.)   |
-| `s` | Storage (GB)          | Allocated storage                   |
-| `u` | % Used                | Storage utilization percentage      |
-| `f` | Free (GiB)            | Available storage space             |
-| `i` | IOPS                  | Provisioned IOPS                    |
-| `e` | EBS Throughput        | Storage throughput (MB/s)           |
-| `t` | Instance ($/hr or $/mo) | Instance pricing (toggles with `m`) |
-| `o` | Storage ($/hr or $/mo)  | Storage pricing (toggles with `m`)  |
-| `p` | IOPS ($/hr or $/mo)     | IOPS pricing (toggles with `m`)     |
+| Key | Column                        | Description                           |
+| --- | ----------------------------- | ------------------------------------- |
+| `n` | Name                          | Instance identifier (👥 = Multi-AZ)   |
+| `c` | Class                         | Instance type (db.r5.large, etc.)     |
+| `s` | Storage (GB)                  | Allocated storage                     |
+| `u` | % Used                        | Storage utilization percentage        |
+| `f` | Free (GiB)                    | Available storage space               |
+| `i` | IOPS                          | Provisioned IOPS                      |
+| `e` | EBS Throughput                | Storage throughput (MB/s)             |
+| `t` | Instance ($/hr or $/mo)       | Instance pricing (toggles with `m`)   |
+| `o` | Storage ($/hr or $/mo)        | Storage pricing (toggles with `m`)    |
+| `p` | IOPS ($/hr or $/mo)           | IOPS pricing (toggles with `m`)       |
 | `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`) |
-| `a` | Total ($/hr or $/mo)    | Total cost (toggles with `m`)       |
+| `a` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)         |
 
 ## 🔧 Technical Details
 
@@ -218,8 +177,9 @@ smart-rds-viewer/
 ### Performance Optimizations
 
 The codebase includes significant performance optimizations:
+
 - **Parallel API calls**: Pricing and metrics APIs run concurrently
-- **Connection pooling**: Reused HTTP connections across AWS services  
+- **Connection pooling**: Reused HTTP connections across AWS services
 - **Batch CloudWatch requests**: Up to 100 metrics per API call
 - **Smart caching**: 24-hour pricing cache with intelligent invalidation
 - **Data filtering**: Reduces API response sizes by 80%+
