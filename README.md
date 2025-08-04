@@ -6,6 +6,8 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 ![Smart RDS Viewer Demo](image.png)
 
+![Smart RDS Viewer Demo - Help Menu](image-help.png)
+
 ## ✨ Features
 
 ### 🔍 **Real-time Data Fetching**
@@ -130,20 +132,20 @@ python rds_viewer.py --nocache
 
 ### Column Shortcuts (Auto-assigned, match table order)
 
-| Key | Column                | Description                       |
-| --- | --------------------- | --------------------------------- |
+| Key | Column                | Description                         |
+| --- | --------------------- | ----------------------------------- |
 | `n` | Name                  | Instance identifier (👥 = Multi-AZ) |
-| `c` | Class                 | Instance type (db.r5.large, etc.) |
-| `s` | Storage (GB)          | Allocated storage                 |
-| `u` | % Used                | Storage utilization percentage    |
-| `f` | Free (GiB)            | Available storage space           |
-| `i` | IOPS                  | Provisioned IOPS                  |
-| `e` | EBS Throughput        | Storage throughput (MB/s)         |
-| `t` | Instance ($/hr)       | Instance hourly pricing           |
-| `o` | Storage ($/hr)        | Storage hourly pricing            |
-| `p` | IOPS ($/hr)           | IOPS hourly pricing               |
-| `h` | EBS Throughput ($/hr) | Throughput hourly pricing         |
-| `a` | Total ($/hr)          | Total hourly cost                 |
+| `c` | Class                 | Instance type (db.r5.large, etc.)   |
+| `s` | Storage (GB)          | Allocated storage                   |
+| `u` | % Used                | Storage utilization percentage      |
+| `f` | Free (GiB)            | Available storage space             |
+| `i` | IOPS                  | Provisioned IOPS                    |
+| `e` | EBS Throughput        | Storage throughput (MB/s)           |
+| `t` | Instance ($/hr)       | Instance hourly pricing             |
+| `o` | Storage ($/hr)        | Storage hourly pricing              |
+| `p` | IOPS ($/hr)           | IOPS hourly pricing                 |
+| `h` | EBS Throughput ($/hr) | Throughput hourly pricing           |
+| `a` | Total ($/hr)          | Total hourly cost                   |
 
 ## 🔧 Technical Details
 
