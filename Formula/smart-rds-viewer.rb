@@ -1,7 +1,7 @@
 class SmartRdsViewer < Formula
   desc "Your terminal companion for monitoring Amazon RDS instances with real-time data, pricing, and interactive insights"
   homepage "https://github.com/k4kratik/smart-rds-viewer"
-  version "0.0.15"
+  version "0.0.16"
   
   on_macos do
     if Hardware::CPU.arm?
