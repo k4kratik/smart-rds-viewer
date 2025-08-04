@@ -81,6 +81,8 @@ This document outlines all the major improvements, features, and enhancements im
 - ✅ **Enhanced styling**: Monthly row uses magenta with 📅 emoji
 - ✅ **Summary calculations**: Accurate monthly totals (hours × 30.42 days)
 - ✅ **Budget planning**: Easy monthly cost visualization
+- ✅ **Interactive toggle**: Press `m` to switch between hourly/monthly views (NEW)
+- ✅ **Daily pricing**: Added daily cost estimates to table title (NEW)
 
 ---
 
@@ -132,7 +134,7 @@ This document outlines all the major improvements, features, and enhancements im
   - ☁️ **Complete Aurora support** with proper handling
   - 📋 **Intuitive help system** with column-ordered shortcuts
   - 💰 **Comprehensive pricing** including all EBS components
-  - 📅 **Monthly cost estimates** with summary totals
+  - 📅 **Interactive cost views** with hourly/monthly toggle and daily estimates
   - 🎨 **Clean, responsive UI** that works in any terminal size
   - 🔧 **Professional features** like cache control and debugging tools
 

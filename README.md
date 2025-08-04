@@ -14,7 +14,7 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 - **RDS Metadata**: Fetches all RDS instances using `boto3`
 - **CloudWatch Metrics**: Live storage usage from CloudWatch APIs
-- **Live Pricing**: On-demand hourly pricing from AWS Pricing API
+- **Live Pricing**: On-demand hourly and monthly pricing from AWS Pricing API
 - **Smart Caching**: 24-hour pricing cache in `/tmp` for faster subsequent runs
 
 ### 📊 **Rich Interactive Table**
@@ -32,6 +32,7 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
   - `n` = Name, `c` = Class, `s` = Storage, `u` = % Used
   - `f` = Free, `i` = IOPS, `e` = Throughput, `t`/`o`/`p`/`h`/`a` = Pricing columns
 - **Smart Sorting**: Toggle ascending/descending with same key
+- **Pricing Toggle**: Press `m` to switch between hourly and monthly cost views
 - **Help System**: Press `?` for interactive help overlay
 - **Clean Exit**: `q` or `Ctrl+C` to exit with terminal cleanup
 
@@ -41,7 +42,7 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 - **Storage Analytics**: Used percentage, free space in GiB
 - **Performance**: IOPS, EBS throughput (with GP2/GP3 awareness)
 - **Complete Cost Breakdown**: Instance, Storage, IOPS, and EBS Throughput pricing
-- **Monthly Estimates**: Automatic monthly cost calculations with summary totals
+- **Flexible Cost Views**: Toggle between hourly and monthly pricing with daily/monthly estimates
 
 ## 🛠️ Installation
 
@@ -127,6 +128,7 @@ python rds_viewer.py --nocache
 ### Interactive Controls
 
 - **Sorting**: Press any column shortcut to sort
+- **Pricing View**: Press `m` to toggle between hourly and monthly costs
 - **Help**: Press `?` to toggle help overlay
 - **Quit**: Press `q` or `Ctrl+C` to exit
 
@@ -141,11 +143,11 @@ python rds_viewer.py --nocache
 | `f` | Free (GiB)            | Available storage space             |
 | `i` | IOPS                  | Provisioned IOPS                    |
 | `e` | EBS Throughput        | Storage throughput (MB/s)           |
-| `t` | Instance ($/hr)       | Instance hourly pricing             |
-| `o` | Storage ($/hr)        | Storage hourly pricing              |
-| `p` | IOPS ($/hr)           | IOPS hourly pricing                 |
-| `h` | EBS Throughput ($/hr) | Throughput hourly pricing           |
-| `a` | Total ($/hr)          | Total hourly cost                   |
+| `t` | Instance ($/hr or $/mo) | Instance pricing (toggles with `m`) |
+| `o` | Storage ($/hr or $/mo)  | Storage pricing (toggles with `m`)  |
+| `p` | IOPS ($/hr or $/mo)     | IOPS pricing (toggles with `m`)     |
+| `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`) |
+| `a` | Total ($/hr or $/mo)    | Total cost (toggles with `m`)       |
 
 ## 🔧 Technical Details
 
