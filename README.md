@@ -18,26 +18,28 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 ### 📊 **Rich Interactive Table**
 
 - **Full-screen Terminal**: Professional full-screen interface like `eks-node-viewer`
-- **Dynamic Columns**: 8 key metrics per instance
-- **Color-coded Alerts**: Red highlighting for instances with ≥80% storage usage
+- **Comprehensive Columns**: 12+ metrics including all pricing components
+- **Smart Highlighting**: Targeted red highlighting for storage issues (≥80% usage)
+- **Multi-AZ Support**: 👥 indicators with accurate 2x pricing for Multi-AZ instances
+- **Aurora Compatible**: Special handling for Aurora instances and pricing
 - **Real-time Updates**: Live data refresh with loading spinners
 
 ### 🎮 **Interactive Controls**
 
-- **Dynamic Shortcuts**: Auto-assigned keys for each column
-  - `N` = Name, `C` = Class, `S` = Storage, `%` = % Used
-  - `F` = Free (GiB), `I` = IOPS, `E` = EBS Throughput, `P` = Price
+- **Dynamic Shortcuts**: Auto-assigned lowercase keys matching table column order
+  - `n` = Name, `c` = Class, `s` = Storage, `u` = % Used
+  - `f` = Free, `i` = IOPS, `e` = Throughput, `t`/`o`/`p`/`h`/`a` = Pricing columns
 - **Smart Sorting**: Toggle ascending/descending with same key
 - **Help System**: Press `?` for interactive help overlay
 - **Clean Exit**: `q` or `Ctrl+C` to exit with terminal cleanup
 
 ### 📈 **Comprehensive Metrics**
 
-- **Instance Details**: Name, class, storage allocation
+- **Instance Details**: Name, class, Multi-AZ indicators (👥)
 - **Storage Analytics**: Used percentage, free space in GiB
-- **Performance**: IOPS, EBS throughput from RDS API
-- **Cost Analysis**: Live hourly pricing per instance
-- **Storage Throughput**: Actual throughput values from RDS
+- **Performance**: IOPS, EBS throughput (with GP2/GP3 awareness)
+- **Complete Cost Breakdown**: Instance, Storage, IOPS, and EBS Throughput pricing
+- **Monthly Estimates**: Automatic monthly cost calculations with summary totals
 
 ## 🛠️ Installation
 
@@ -113,7 +115,11 @@ make help
 ### Basic Usage
 
 ```bash
+# Standard run
 python rds_viewer.py
+
+# Force fresh pricing data (bypass cache)
+python rds_viewer.py --nocache
 ```
 
 ### Interactive Controls
@@ -122,18 +128,22 @@ python rds_viewer.py
 - **Help**: Press `?` to toggle help overlay
 - **Quit**: Press `q` or `Ctrl+C` to exit
 
-### Column Shortcuts (Auto-assigned)
+### Column Shortcuts (Auto-assigned, match table order)
 
-| Key | Column         | Description                       |
-| --- | -------------- | --------------------------------- |
-| `N` | Name           | Instance identifier               |
-| `C` | Class          | Instance type (db.r5.large, etc.) |
-| `S` | Storage (GB)   | Allocated storage                 |
-| `%` | % Used         | Storage utilization percentage    |
-| `F` | Free (GiB)     | Available storage space           |
-| `I` | IOPS           | Provisioned IOPS                  |
-| `E` | EBS Throughput | Storage throughput from RDS       |
-| `P` | Price ($/hr)   | Live hourly pricing               |
+| Key | Column                | Description                       |
+| --- | --------------------- | --------------------------------- |
+| `n` | Name                  | Instance identifier (👥 = Multi-AZ) |
+| `c` | Class                 | Instance type (db.r5.large, etc.) |
+| `s` | Storage (GB)          | Allocated storage                 |
+| `u` | % Used                | Storage utilization percentage    |
+| `f` | Free (GiB)            | Available storage space           |
+| `i` | IOPS                  | Provisioned IOPS                  |
+| `e` | EBS Throughput        | Storage throughput (MB/s)         |
+| `t` | Instance ($/hr)       | Instance hourly pricing           |
+| `o` | Storage ($/hr)        | Storage hourly pricing            |
+| `p` | IOPS ($/hr)           | IOPS hourly pricing               |
+| `h` | EBS Throughput ($/hr) | Throughput hourly pricing         |
+| `a` | Total ($/hr)          | Total hourly cost                 |
 
 ## 🔧 Technical Details
 
@@ -155,6 +165,7 @@ python rds_viewer.py
 - **Location**: `/tmp/rds_pricing_cache.json`
 - **Duration**: 24 hours
 - **Auto-refresh**: Expired cache triggers fresh API calls
+- **Manual override**: Use `--nocache` flag to force fresh data
 - **Error Recovery**: Corrupted cache falls back to API
 
 ## 🤖 Built with AI Assistance
