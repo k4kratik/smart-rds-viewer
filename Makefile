@@ -36,7 +36,7 @@ lint:
 	@python3 -m py_compile *.py
 	@echo "✓ Syntax check passed"
 
-# Build binary executable
+# Build binary executable  
 binary:
 	@echo "🔨 Building binary executable..."
 	@python3 build.py
