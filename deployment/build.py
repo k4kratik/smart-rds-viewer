@@ -31,9 +31,9 @@ def build_binary():
         "pyinstaller",
         "--onefile",  # Create a single executable file
         "--name=smart-rds-viewer",  # Name of the binary
-        "--distpath=./dist",  # Output directory
-        "--workpath=./build",  # Build work directory
-        "--specpath=./build",  # Spec file directory
+        "--distpath=../dist",  # Output directory (parent dir)
+        "--workpath=../build",  # Build work directory (parent dir)
+        "--specpath=../build",  # Spec file directory (parent dir)
         "--clean",  # Clean cache before building
         "--noconfirm",  # Replace existing files without asking
         "--hidden-import=readchar",  # Explicitly include readchar
@@ -41,7 +41,7 @@ def build_binary():
         "--collect-all=readchar",  # Collect all readchar files
         "--exclude-module=tkinter",  # Exclude tkinter if not needed
         "--exclude-module=matplotlib",  # Exclude matplotlib if not needed
-        "rds_viewer.py",  # Main script
+        "../rds_viewer.py",  # Main script (parent dir)
     ]
 
     try:

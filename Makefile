@@ -1,4 +1,4 @@
-.PHONY: build clean install run help
+.PHONY: build clean install run help benchmark
 
 # Default target
 all: build
@@ -6,7 +6,7 @@ all: build
 # Build the binary
 build:
 	@echo "🔨 Building Smart RDS Viewer binary..."
-	@python3 build.py
+	@cd deployment && python3 build.py
 
 # Clean build artifacts
 clean:
@@ -30,6 +30,11 @@ run-binary:
 	@echo "🚀 Running Smart RDS Viewer binary..."
 	@./dist/smart-rds-viewer
 
+# Simple performance benchmark
+benchmark:
+	@echo "⚡ Running performance benchmark..."
+	@python3 benchmarks/simple_benchmark.py
+
 # Show help
 help:
 	@echo "Smart RDS Viewer - Build Commands"
@@ -39,4 +44,5 @@ help:
 	@echo "make install    - Install Python dependencies"
 	@echo "make run        - Run the Python version"
 	@echo "make run-binary - Run the binary version (if built)"
+	@echo "make benchmark  - Run quick performance benchmark"
 	@echo "make help       - Show this help message" 

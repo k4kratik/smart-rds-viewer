@@ -4,9 +4,9 @@
 
 A powerful, full-screen terminal CLI that fetches and displays all your Amazon RDS instances with live metrics, pricing, and interactive sorting - all from the comfort of your terminal.
 
-![Smart RDS Viewer Demo](image.png)
+![Smart RDS Viewer Demo](docs/image.png)
 
-![Smart RDS Viewer Demo - Help Menu](image-help.png)
+![Smart RDS Viewer Demo - Help Menu](docs/image-help.png)
 
 ## ✨ Features
 
@@ -181,6 +181,48 @@ This tool was collaboratively developed with the help of **Claude Sonnet 4**, an
 - **Documentation**: Comprehensive README with all features and future roadmap
 
 The AI assistant helped transform a simple concept into a comprehensive, production-ready RDS monitoring tool with advanced features like smart caching, interactive sorting, and professional terminal UI.
+
+## 📁 Project Structure
+
+```
+smart-rds-viewer/
+├── Core Application
+│   ├── __main__.py           # Entry point
+│   ├── rds_viewer.py         # Main application logic
+│   ├── ui.py                 # Rich terminal UI components
+│   ├── fetch.py              # RDS data fetching (optimized)
+│   ├── metrics.py            # CloudWatch metrics (batch API)
+│   ├── pricing.py            # AWS Pricing API (parallelized)
+│   ├── requirements.txt      # Python dependencies
+│   ├── Makefile              # Build automation (kept in root)
+│   └── README.md             # Project documentation
+├── docs/                     # Documentation & Images
+│   ├── BENCHMARKING.md       # Performance benchmarks
+│   ├── HOMEBREW.md           # Homebrew installation guide
+│   ├── IMPROVEMENTS-1.md     # Development history
+│   ├── image.png             # Main demo screenshot
+│   └── image-help.png        # Help menu screenshot
+├── deployment/               # Build & Deployment
+│   ├── build.py              # Binary build script
+│   └── Formula/              # Homebrew formula
+├── benchmarks/              # Performance Testing
+│   └── simple_benchmark.py   # Performance benchmarks
+└── scripts/                 # Utility Scripts
+    ├── debug_pricing.py      # Pricing debugging
+    ├── inspect_pricing.py    # Pricing analysis
+    └── update-formula.rb     # Homebrew formula updates
+```
+
+### Performance Optimizations
+
+The codebase includes significant performance optimizations:
+- **Parallel API calls**: Pricing and metrics APIs run concurrently
+- **Connection pooling**: Reused HTTP connections across AWS services  
+- **Batch CloudWatch requests**: Up to 100 metrics per API call
+- **Smart caching**: 24-hour pricing cache with intelligent invalidation
+- **Data filtering**: Reduces API response sizes by 80%+
+
+**Performance Results**: 72% faster than original (6.7s fresh, 1.6s cached)
 
 ## 🤝 Contributing
 
