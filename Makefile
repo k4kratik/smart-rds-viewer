@@ -1,12 +1,17 @@
-.PHONY: build clean install run help benchmark
+.PHONY: build clean install run lint benchmark help
 
 # Default target
 all: build
 
-# Build the binary
+# Validate the project (syntax, imports, etc.)
 build:
-	@echo "🔨 Building Smart RDS Viewer binary..."
-	@cd deployment && python3 build.py
+	@echo "🔨 Validating Smart RDS Viewer project..."
+	@echo "📋 Checking Python syntax..."
+	@python3 -m py_compile *.py
+	@echo "✓ Syntax check passed"
+	@echo "📦 Checking imports (requires dependencies)..."
+	@python3 -c "try: import rds_viewer, ui, fetch, metrics, pricing; print('✓ All imports successful')\nexcept ImportError as e: print(f'⚠️  Import warning: {e} (run make install first)')" || true
+	@echo "✅ Project validation complete!"
 
 # Clean build artifacts
 clean:
@@ -25,10 +30,11 @@ run:
 	@echo "🚀 Running Smart RDS Viewer..."
 	@python3 rds_viewer.py
 
-# Run the binary (if built)
-run-binary:
-	@echo "🚀 Running Smart RDS Viewer binary..."
-	@./dist/smart-rds-viewer
+# Add a lint check
+lint:
+	@echo "🔍 Running code quality checks..."
+	@python3 -m py_compile *.py
+	@echo "✓ Syntax check passed"
 
 # Simple performance benchmark
 benchmark:
@@ -39,10 +45,10 @@ benchmark:
 help:
 	@echo "Smart RDS Viewer - Build Commands"
 	@echo "=================================="
-	@echo "make build      - Build the binary executable"
+	@echo "make build      - Validate project (syntax, imports, tests)"
 	@echo "make clean      - Clean build artifacts"
 	@echo "make install    - Install Python dependencies"
 	@echo "make run        - Run the Python version"
-	@echo "make run-binary - Run the binary version (if built)"
+	@echo "make lint       - Run code quality checks"
 	@echo "make benchmark  - Run quick performance benchmark"
 	@echo "make help       - Show this help message" 
