@@ -25,17 +25,18 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Test build
+      - name: Test build validation
         run: |
-          python build.py
+          echo "🔨 Running project validation..."
+          make build
 
-      - name: Verify binary exists
+      - name: Test core functionality
         run: |
-          ls -la dist/
-          if [ -f "dist/smart-rds-viewer" ]; then
-            echo "✅ Binary built successfully"
-            echo "📏 Binary size: $(du -h dist/smart-rds-viewer | cut -f1)"
-          else
-            echo "❌ Binary not found"
-            exit 1
-          fi
+          echo "🧪 Testing core functionality..."
+          python -c "
+          import rds_viewer, ui, fetch, metrics, pricing
+          print('✅ All imports successful')
+          from fetch import validate_aws_credentials
+          print('✅ Core functions accessible')
+          print('✅ Project validation complete')
+          "

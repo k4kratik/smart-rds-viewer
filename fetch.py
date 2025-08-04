@@ -1,6 +1,29 @@
 import boto3
 import sys
+import threading
 from botocore.exceptions import BotoCoreError, ClientError
+from botocore.config import Config
+
+# Optimized boto3 configuration
+OPTIMIZED_CONFIG = Config(
+    max_pool_connections=30,
+    retries={'max_attempts': 3, 'mode': 'adaptive'},
+    connect_timeout=10,
+    read_timeout=30
+)
+
+# Thread-local storage for boto3 clients
+_local = threading.local()
+
+def get_optimized_rds_client(region='ap-south-1'):
+    """Get thread-local optimized RDS client with connection pooling."""
+    client_key = f'rds_client_{region}'
+    if not hasattr(_local, client_key):
+        session = boto3.Session()
+        setattr(_local, client_key, session.client('rds', 
+                                                  region_name=region,
+                                                  config=OPTIMIZED_CONFIG))
+    return getattr(_local, client_key)
 
 def validate_aws_credentials():
     """Validate AWS credentials by making a simple API call."""
@@ -24,7 +47,7 @@ def is_aurora_instance(engine):
 
 def fetch_rds_instances():
     """Fetch all RDS instances and their key metadata."""
-    rds = boto3.client('rds', region_name='ap-south-1')
+    rds = get_optimized_rds_client('ap-south-1')
     instances = []
     try:
         paginator = rds.get_paginator('describe_db_instances')

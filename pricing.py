@@ -4,10 +4,37 @@ import os
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
+from botocore.config import Config
 
 # Cache configuration
 CACHE_FILE = "/tmp/rds_pricing_cache.json"
 CACHE_DURATION_HOURS = 24  # Cache for 24 hours
+
+# Optimized boto3 configuration
+OPTIMIZED_CONFIG = Config(
+    # Connection pooling - reuse connections
+    max_pool_connections=50,
+    # Retry configuration  
+    retries={'max_attempts': 3, 'mode': 'adaptive'},
+    # HTTP configuration
+    connect_timeout=10,
+    read_timeout=30
+)
+
+# Thread-local storage for boto3 sessions
+_local = threading.local()
+
+def get_optimized_pricing_client():
+    """Get thread-local optimized pricing client with connection pooling."""
+    if not hasattr(_local, 'pricing_client'):
+        # Create a new session with optimized configuration
+        session = boto3.Session()
+        _local.pricing_client = session.client('pricing', 
+                                             region_name='us-east-1',
+                                             config=OPTIMIZED_CONFIG)
+    return _local.pricing_client
 
 
 def tuple_to_key(tuple_key):
@@ -88,6 +115,72 @@ def save_cached_pricing(prices):
         print(f"[WARN] Error saving cache: {e}")
 
 
+def get_rds_pricing_data_optimized(region: str, engine: str, instance_types: set, data_type: str) -> List[Dict]:
+    """
+    Optimized pricing data fetch with aggressive filtering and smaller result sets.
+    """
+    client = get_optimized_pricing_client()
+    
+    # Base filters for instance data
+    base_filters = [
+        {"Type": "TERM_MATCH", "Field": "regionCode", "Value": region},
+        {"Type": "TERM_MATCH", "Field": "databaseEngine", "Value": engine},
+    ]
+    
+    pricing_data = []
+    next_token = None
+    max_results = 50  # Smaller result sets for faster processing
+    
+    while True:
+        # Build request parameters
+        params = {
+            "ServiceCode": "AmazonRDS",
+            "Filters": base_filters,
+            "MaxResults": max_results
+        }
+        if next_token:
+            params["NextToken"] = next_token
+
+        # Make API call
+        response = client.get_products(**params)
+        
+        # Process current page with early filtering
+        for product_json in response["PriceList"]:
+            product = json.loads(product_json)
+            attributes = product.get("product", {}).get("attributes", {})
+            
+            # Early filtering by instance type to reduce processing
+            instance_type = attributes.get("instanceType", "")
+            if instance_type and instance_type not in instance_types:
+                continue
+            
+            usage_type = attributes.get("usagetype", "").lower()
+            
+            # Get all pricing terms
+            terms = product.get("terms", {}).get("OnDemand", {})
+            for term_data in terms.values():
+                for price_dim in term_data.get("priceDimensions", {}).values():
+                    price_info = {
+                        "Description": price_dim.get("description"),
+                        "UsageType": usage_type,
+                        "Price (USD)": price_dim["pricePerUnit"].get("USD", "N/A"),
+                        "Unit": price_dim.get("unit", ""),
+                        "StorageType": attributes.get("volumeType", ""),
+                        "DeploymentOption": attributes.get("deploymentOption", ""),
+                        "Engine": attributes.get("databaseEngine", ""),
+                        "Region": attributes.get("regionCode", ""),
+                        "InstanceType": instance_type,
+                    }
+                    pricing_data.append(price_info)
+        
+        # Check for more pages - but limit to reasonable amount
+        next_token = response.get("NextToken")
+        if not next_token or len(pricing_data) > 1000:  # Safety limit
+            break
+
+    return pricing_data
+
+
 def get_rds_pricing_data(region: str = "ap-south-1", engine: str = "MySQL", filters: List[Dict] = None) -> List[Dict]:
     """
     Fetch RDS pricing information based on provided filters.
@@ -99,8 +192,8 @@ def get_rds_pricing_data(region: str = "ap-south-1", engine: str = "MySQL", filt
         engine: Database engine (e.g., MySQL, PostgreSQL)
         filters: Additional filters to apply to the pricing API query
     """
-    # Pricing API only works in us-east-1
-    client = boto3.client("pricing", region_name="us-east-1")
+    # Use optimized client with connection pooling
+    client = get_optimized_pricing_client()
     
     # Base filters
     base_filters = [
@@ -382,8 +475,89 @@ def map_engine_name_for_pricing(engine):
     }
     return engine_mapping.get(engine.lower(), engine)
 
+def fetch_pricing_for_region_engine(region, engine, instances):
+    """Fetch pricing data for a specific region/engine combination."""
+    pricing_engine = map_engine_name_for_pricing(engine)
+    
+    # Get unique instance types to filter pricing data
+    instance_types = set(inst["DBInstanceClass"] for inst in instances)
+    print(f"[INFO] Fetching pricing for {engine} ({pricing_engine}) in {region}, {len(instance_types)} instance types...")
+    
+    def fetch_data_type(data_type, filters=None):
+        """Helper to fetch specific data type with error handling."""
+        try:
+            if filters is None:
+                filters = []
+            return get_rds_pricing_data(region=region, engine=pricing_engine, filters=filters)
+        except Exception as e:
+            print(f"[WARN] Failed to fetch {data_type} for {engine} in {region}: {e}")
+            return []
+    
+    try:
+        # Revert to simple parallel approach but with connection pooling
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            # Submit all 4 API calls simultaneously
+            future_instance = executor.submit(fetch_data_type, "instance")
+            future_storage = executor.submit(fetch_data_type, "storage", 
+                                           [{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Database Storage"}])
+            future_iops = executor.submit(fetch_data_type, "iops",
+                                        [{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Provisioned IOPS"}])
+            future_throughput = executor.submit(fetch_data_type, "throughput", [])
+            
+            # Collect results
+            instance_pricing_data = future_instance.result()
+            storage_pricing_data = future_storage.result()
+            iops_pricing_data = future_iops.result()
+            throughput_pricing_data = future_throughput.result()
+        
+        # Filter results to only relevant instance types to reduce processing time
+        if instance_pricing_data:
+            original_count = len(instance_pricing_data)
+            instance_pricing_data = [
+                item for item in instance_pricing_data 
+                if item.get("InstanceType", "") in instance_types or not item.get("InstanceType")
+            ]
+            print(f"[INFO] Filtered instance records: {len(instance_pricing_data)}/{original_count}")
+        
+        # Filter throughput data
+        throughput_pricing_data = [
+            item for item in throughput_pricing_data 
+            if 'throughput' in item.get('UsageType', '').lower()
+        ]
+        
+        if not instance_pricing_data:
+            print(f"[WARN] No instance pricing data found for {engine} ({pricing_engine}) in {region}")
+            return {(inst["DBInstanceClass"], region, engine): None for inst in instances}
+        
+        # Process each instance in this group
+        result_prices = {}
+        for inst in instances:
+            instance_class = inst["DBInstanceClass"]
+            storage_type = inst.get("StorageType", "gp3")
+            allocated_storage = inst.get("AllocatedStorage", 0)
+            iops = inst.get("Iops", 0)
+            storage_throughput = inst.get("StorageThroughput", 0)
+            
+            # Parse pricing components using separate datasets
+            price_breakdown = parse_pricing_components_v2(
+                instance_pricing_data, storage_pricing_data, iops_pricing_data, throughput_pricing_data,
+                instance_class, storage_type, allocated_storage, iops, storage_throughput
+            )
+            
+            result_prices[(instance_class, region, engine)] = price_breakdown
+            
+            if price_breakdown["total"] == 0:
+                print(f"[WARN] No price found for {instance_class} in {region} (engine: {engine})")
+        
+        return result_prices
+                
+    except Exception as e:
+        print(f"[ERROR] Pricing API failed for {engine} in {region}: {e}")
+        return {(inst["DBInstanceClass"], region, engine): None for inst in instances}
+
+
 def fetch_rds_pricing(rds_instances, nocache=False):
-    """Fetch live on-demand hourly pricing for each RDS instance type with caching."""
+    """Fetch live on-demand hourly pricing for each RDS instance type with caching and parallel execution."""
     # Try to load from cache first (unless nocache is specified)
     cached_prices = load_cached_pricing(nocache=nocache)
     if cached_prices is not None:
@@ -403,73 +577,28 @@ def fetch_rds_pricing(rds_instances, nocache=False):
             region_engine_groups[key] = []
         region_engine_groups[key].append(inst)
     
-    # Fetch pricing data for each region/engine combination
-    for (region, engine), instances in region_engine_groups.items():
-        # Map engine name for pricing API
-        pricing_engine = map_engine_name_for_pricing(engine)
-        print(f"[INFO] Fetching pricing for {engine} ({pricing_engine}) in {region}...")
+    print(f"[INFO] Processing {len(region_engine_groups)} unique region/engine combinations in parallel...")
+    
+    # Use ThreadPoolExecutor to parallelize region/engine combinations
+    with ThreadPoolExecutor(max_workers=min(8, len(region_engine_groups))) as executor:
+        # Submit all region/engine combinations for parallel processing
+        future_to_key = {
+            executor.submit(fetch_pricing_for_region_engine, region, engine, instances): (region, engine)
+            for (region, engine), instances in region_engine_groups.items()
+        }
         
-        try:
-            # Get instance pricing data for this region/engine
-            instance_pricing_data = get_rds_pricing_data(region=region, engine=pricing_engine)
-            
-            # Get storage pricing data (separate API call)
-            storage_pricing_data = get_rds_pricing_data(
-                region=region, 
-                engine=pricing_engine,
-                filters=[{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Database Storage"}]
-            )
-            
-            # Get IOPS pricing data (separate API call)
-            iops_pricing_data = get_rds_pricing_data(
-                region=region,
-                engine=pricing_engine, 
-                filters=[{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Provisioned IOPS"}]
-            )
-            
-            # Get throughput pricing data (separate API call) - for gp3 volumes
-            # Note: Throughput pricing has productFamily="N/A", so we search without family filter
-            throughput_pricing_data = get_rds_pricing_data(
-                region=region,
-                engine=pricing_engine,
-                filters=[]  # No product family filter - throughput items have productFamily="N/A"
-            )
-            
-            # Filter to only throughput-related items from the unfiltered data
-            throughput_pricing_data = [
-                item for item in throughput_pricing_data 
-                if 'throughput' in item.get('UsageType', '').lower()
-            ]
-            
-            if not instance_pricing_data:
-                print(f"[WARN] No instance pricing data found for {engine} ({pricing_engine}) in {region}")
+        # Collect results as they complete
+        for future in as_completed(future_to_key):
+            region, engine = future_to_key[future]
+            try:
+                region_prices = future.result()
+                prices.update(region_prices)
+            except Exception as e:
+                print(f"[ERROR] Failed to process {engine} in {region}: {e}")
+                # Add None entries for failed instances
+                instances = region_engine_groups[(region, engine)]
                 for inst in instances:
                     prices[(inst["DBInstanceClass"], region, engine)] = None
-                continue
-            
-            # Process each instance in this group
-            for inst in instances:
-                instance_class = inst["DBInstanceClass"]
-                storage_type = inst.get("StorageType", "gp3")
-                allocated_storage = inst.get("AllocatedStorage", 0)
-                iops = inst.get("Iops", 0)
-                storage_throughput = inst.get("StorageThroughput", 0)
-                
-                # Parse pricing components using separate datasets
-                price_breakdown = parse_pricing_components_v2(
-                    instance_pricing_data, storage_pricing_data, iops_pricing_data, throughput_pricing_data,
-                    instance_class, storage_type, allocated_storage, iops, storage_throughput
-                )
-                
-                prices[(instance_class, region, engine)] = price_breakdown
-                
-                if price_breakdown["total"] == 0:
-                    print(f"[WARN] No price found for {instance_class} in {region} (engine: {engine})")
-                    
-        except Exception as e:
-            print(f"[ERROR] Pricing API failed for {engine} in {region}: {e}")
-            for inst in instances:
-                prices[(inst["DBInstanceClass"], region, engine)] = None
 
     # Save to cache
     save_cached_pricing(prices)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Build script for creating binary executable of Smart RDS Viewer
+Designed for GitHub Actions and CI/CD workflows
 """
 
 import os
@@ -14,7 +15,6 @@ def install_pyinstaller():
     """Install PyInstaller if not already installed"""
     try:
         import PyInstaller
-
         print("✓ PyInstaller already installed")
     except ImportError:
         print("Installing PyInstaller...")
@@ -69,51 +69,96 @@ def build_binary():
 def clean_build():
     """Clean build artifacts"""
     print("🧹 Cleaning build artifacts...")
+    
+    artifacts = ["build", "dist", "*.spec"]
+    for pattern in artifacts:
+        if pattern.startswith("*"):
+            # Handle glob patterns
+            import glob
+            for file in glob.glob(pattern):
+                try:
+                    os.remove(file)
+                    print(f"  ✓ Removed {file}")
+                except OSError:
+                    pass
+        else:
+            # Handle directories
+            if os.path.exists(pattern):
+                try:
+                    shutil.rmtree(pattern)
+                    print(f"  ✓ Removed {pattern}/")
+                except OSError:
+                    pass
+    
+    print("✓ Cleanup complete")
 
-    dirs_to_clean = ["build", "dist"]
-    for dir_name in dirs_to_clean:
-        if os.path.exists(dir_name):
-            shutil.rmtree(dir_name)
-            print(f"✓ Removed {dir_name}/")
 
-    # Remove .spec file
-    spec_file = "smart-rds-viewer.spec"
-    if os.path.exists(spec_file):
-        os.remove(spec_file)
-        print(f"✓ Removed {spec_file}")
+def validate_environment():
+    """Validate the build environment"""
+    print("🔍 Validating build environment...")
+    
+    # Check Python version
+    if sys.version_info < (3, 8):
+        print("❌ Python 3.8+ required")
+        return False
+    
+    print(f"✓ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    
+    # Check for main script
+    if not os.path.exists("rds_viewer.py"):
+        print("❌ rds_viewer.py not found")
+        return False
+    
+    print("✓ Main script found")
+    
+    # Check dependencies
+    try:
+        import boto3
+        import rich
+        import readchar
+        print("✓ All dependencies available")
+    except ImportError as e:
+        print(f"⚠️  Missing dependency: {e}")
+        print("   Run: pip install -r requirements.txt")
+        return False
+    
+    return True
 
 
 def main():
-    """Main build process"""
-    print("🚀 Smart RDS Viewer Binary Builder")
+    """Main build function"""
+    print("🚀 Smart RDS Viewer - Build Script")
     print("=" * 40)
-
-    # Check if we're in the right directory
-    if not os.path.exists("rds_viewer.py"):
-        print("❌ Error: rds_viewer.py not found in current directory")
-        print("Please run this script from the project root directory")
-        sys.exit(1)
-
-    # Install PyInstaller
-    install_pyinstaller()
-
+    
+    # Parse command line arguments
+    clean_only = "--clean" in sys.argv
+    skip_validation = "--skip-validation" in sys.argv
+    
+    if clean_only:
+        clean_build()
+        return
+    
+    # Validate environment
+    if not skip_validation:
+        if not validate_environment():
+            print("\n❌ Environment validation failed")
+            sys.exit(1)
+    
     # Clean previous builds
     clean_build()
-
+    
+    # Install PyInstaller
+    install_pyinstaller()
+    
     # Build binary
     binary_path = build_binary()
-
+    
     if binary_path:
-        print("\n🎉 Build completed successfully!")
-        print(f"📁 Binary location: {binary_path}")
-        print("\n💡 Usage:")
-        print(f"   ./dist/smart-rds-viewer")
-        if sys.platform == "win32":
-            print(f"   .\\dist\\smart-rds-viewer.exe")
-        print("\n⚠️  Note: The binary requires AWS credentials to be configured")
-        print("   (environment variables, IAM role, or AWS CLI configuration)")
+        print(f"\n🎉 Build successful!")
+        print(f"📦 Binary: {binary_path}")
+        print(f"🚀 Ready for distribution!")
     else:
-        print("\n❌ Build failed!")
+        print(f"\n❌ Build failed!")
         sys.exit(1)
 
 
