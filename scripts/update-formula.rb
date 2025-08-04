@@ -7,7 +7,7 @@ require 'digest'
 # Configuration
 REPO = "k4kratik/smart-rds-viewer"
 VERSION = ARGV[0] || "1.0.0"
-FORMULA_PATH = "Formula/smart-rds-viewer.rb"
+FORMULA_PATH = "deployment/Formula/smart-rds-viewer.rb"
 
 # Helper to follow redirects (e.g., GitHub asset links)
 def fetch_with_redirect(uri_str, limit = 10)
