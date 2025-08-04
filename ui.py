@@ -68,6 +68,10 @@ def display_rds_table(rds_instances, metrics, pricing):
     sort_state = {'key': 'name', 'ascending': True}
     show_help = False
 
+    def has_multi_az_instances():
+        """Check if any instances are Multi-AZ"""
+        return any(inst.get('MultiAZ', False) for inst in rds_instances)
+
     def get_rows():
         rows = []
         for inst in rds_instances:
@@ -193,7 +197,7 @@ def display_rds_table(rds_instances, metrics, pricing):
         keyfunc = sort_funcs.get(k, lambda r: r['name'] or '')
         return sorted(rows, key=keyfunc, reverse=not ascending)
 
-    def create_help_panel():
+    def create_help_panel(has_multi_az=False):
         # Create compact horizontal layout - maintain column order
         help_items = []
         # Iterate through columns in their original order to maintain table sequence
@@ -218,12 +222,16 @@ def display_rds_table(rds_instances, metrics, pricing):
             help_text += "  " + "  ".join(formatted_items) + "\n"
         
         help_text += "\n[bold yellow]⌨️  Controls:[/bold yellow] [cyan]q[/cyan]=Quit  [cyan]?[/cyan]=Close Help  [cyan]ctrl+c[/cyan]=Exit"
-        help_text += " [yellow]| 👥=Multi-AZ (2x pricing) | Press letter to sort, ? to close[/yellow]"
+        # Only show Multi-AZ explanation if there are Multi-AZ instances
+        if has_multi_az:
+            help_text += " [yellow]| 👥=Multi-AZ (2x pricing) | Press letter to sort, ? to close[/yellow]"
+        else:
+            help_text += " [yellow]| Press letter to sort, ? to close[/yellow]"
         
         return Panel(help_text, title="💡 Help & Shortcuts - Press ? to close", 
                     border_style="bright_blue", expand=True, padding=(0, 1))
 
-    def render_table():
+    def render_table(has_multi_az=False):
         table = Table(title="Amazon RDS Instances", box=box.SIMPLE_HEAVY)
         
         # Add columns dynamically
@@ -366,22 +374,23 @@ def display_rds_table(rds_instances, metrics, pricing):
         ]
         table.add_row(*monthly_row, style="bold magenta")
         
-        # Add multi-AZ explanation note
-        note_row = [
-            f"[dim]👥 = Multi-AZ (2x pricing)[/dim]",  # Name column with note
-            "",  # Class column
-            "",  # Storage column  
-            "",  # % Used column
-            "",  # Free column
-            "",  # IOPS column
-            "",  # Throughput column
-            "",  # Instance pricing
-            "",  # Storage pricing
-            "",  # IOPS pricing
-            "",  # Throughput pricing
-            ""   # Total pricing
-        ]
-        table.add_row(*note_row, style="dim")
+        # Add multi-AZ explanation note only if there are Multi-AZ instances
+        if has_multi_az:
+            note_row = [
+                f"[dim]👥 = Multi-AZ (2x pricing)[/dim]",  # Name column with note
+                "",  # Class column
+                "",  # Storage column  
+                "",  # % Used column
+                "",  # Free column
+                "",  # IOPS column
+                "",  # Throughput column
+                "",  # Instance pricing
+                "",  # Storage pricing
+                "",  # IOPS pricing
+                "",  # Throughput pricing
+                ""   # Total pricing
+            ]
+            table.add_row(*note_row, style="dim")
         
         # Update table title to include monthly total for visibility
         table.title = f"Amazon RDS Instances - Monthly Est: ${monthly_total:.2f} ({instance_count} instances)"
@@ -390,6 +399,7 @@ def display_rds_table(rds_instances, metrics, pricing):
 
     def render_layout():
         layout = Layout()
+        has_multi_az = has_multi_az_instances()
         
         if show_help:
             # Show help as a bottom popup panel
@@ -399,17 +409,17 @@ def display_rds_table(rds_instances, metrics, pricing):
             )
             
             # Main content (table)
-            table = render_table()
+            table = render_table(has_multi_az)
             layout["main"].update(table)
             
             # Help popup at bottom
-            help_panel = create_help_panel()
+            help_panel = create_help_panel(has_multi_az)
             layout["help"].update(help_panel)
             
         else:
             # Normal mode - just the table, full screen
             layout.add_split(Layout(name="main"))
-            table = render_table()
+            table = render_table(has_multi_az)
             layout["main"].update(table)
         
         return layout
