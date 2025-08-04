@@ -226,7 +226,8 @@ def display_rds_table(rds_instances, metrics, pricing):
             formatted_items = [f"{item:<22}" for item in row_items]
             help_text += "  " + "  ".join(formatted_items) + "\n"
         
-        help_text += "\n[bold yellow]⌨️  Controls:[/bold yellow] [cyan]q[/cyan]=Quit  [cyan]m[/cyan]=Toggle Monthly/Hourly  [cyan]?[/cyan]=Close Help  [cyan]ctrl+c[/cyan]=Exit"
+        help_text += "\n[bold yellow]⌨️  Controls:[/bold yellow] [cyan]q[/cyan]=Quit  [cyan]?[/cyan]=Close Help  [cyan]ctrl+c[/cyan]=Exit\n"
+        help_text += "[bold yellow]💰 Pricing View:[/bold yellow] [cyan]m[/cyan]=Toggle Monthly/Hourly pricing display"
         # Only show Multi-AZ explanation if there are Multi-AZ instances
         if has_multi_az:
             help_text += " [yellow]| 👥=Multi-AZ (2x pricing) | Press letter to sort, ? to close[/yellow]"
@@ -464,7 +465,7 @@ def display_rds_table(rds_instances, metrics, pricing):
         progress.add_task(description="Fetching and processing RDS data...", total=None)
         time.sleep(0.5)  # Simulate loading
 
-    # Interactive table with full screen
+    # Interactive table with full screen - maximum responsiveness
     with Live(render_layout(), refresh_per_second=4, console=console, screen=True) as live:
         console.print("\nPress [bold]?[/bold] for help, [bold]m[/bold] to toggle monthly/hourly, [bold]q[/bold] to quit.")
         while True:
