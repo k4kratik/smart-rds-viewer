@@ -42,7 +42,7 @@ ruby scripts/update-formula.rb 1.0.0
 
 ```bash
 # Test the formula locally
-brew install --build-from-source Formula/smart-rds-viewer.rb
+brew install --build-from-source deployment/Formula/smart-rds-viewer.rb
 ```
 
 ## 📋 Formula Details
