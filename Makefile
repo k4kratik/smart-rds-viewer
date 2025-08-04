@@ -1,4 +1,4 @@
-.PHONY: build clean install run lint benchmark help
+.PHONY: build clean install run lint binary benchmark help
 
 # Default target
 all: build
@@ -36,6 +36,11 @@ lint:
 	@python3 -m py_compile *.py
 	@echo "✓ Syntax check passed"
 
+# Build binary executable
+binary:
+	@echo "🔨 Building binary executable..."
+	@python3 build.py
+
 # Simple performance benchmark
 benchmark:
 	@echo "⚡ Running performance benchmark..."
@@ -50,5 +55,6 @@ help:
 	@echo "make install    - Install Python dependencies"
 	@echo "make run        - Run the Python version"
 	@echo "make lint       - Run code quality checks"
+	@echo "make binary     - Build binary executable"
 	@echo "make benchmark  - Run quick performance benchmark"
 	@echo "make help       - Show this help message" 
