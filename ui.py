@@ -17,26 +17,34 @@ def clear_terminal():
     os.system('clear' if os.name == 'posix' else 'cls')
 
 def display_rds_table(rds_instances, metrics, pricing):
-    # Define columns with their display names and sort keys
-    columns = [
-        {'name': 'Name', 'key': 'name', 'justify': 'left'},
-        {'name': 'Class', 'key': 'class', 'justify': 'left'},
-        {'name': 'Storage (GB)', 'key': 'storage', 'justify': 'right'},
-        {'name': '% Used', 'key': 'used_pct', 'justify': 'right'},
-        {'name': 'Free (GiB)', 'key': 'free_gb', 'justify': 'right'},
-        {'name': 'IOPS', 'key': 'iops', 'justify': 'right'},
-        {'name': 'EBS\nThroughput', 'key': 'storage_throughput', 'justify': 'right'},
-        {'name': 'Instance\n($/hr)', 'key': 'instance_price', 'justify': 'right'},
-        {'name': 'Storage\n($/hr)', 'key': 'storage_price', 'justify': 'right'},
-        {'name': 'IOPS\n($/hr)', 'key': 'iops_price', 'justify': 'right'},
-        {'name': 'EBS\nThroughput\n($/hr)', 'key': 'throughput_price', 'justify': 'right'},
-        {'name': 'Total\n($/hr)', 'key': 'total_price', 'justify': 'right'},
-    ]
+    
+    sort_state = {'key': 'name', 'ascending': True}
+    show_help = False
+    show_monthly = False  # Toggle between hourly and monthly view
+    
+    def get_columns():
+        """Get column definitions based on current view mode."""
+        price_unit = "$/mo" if show_monthly else "$/hr"
+        return [
+            {'name': 'Name', 'key': 'name', 'justify': 'left'},
+            {'name': 'Class', 'key': 'class', 'justify': 'left'},
+            {'name': 'Storage (GB)', 'key': 'storage', 'justify': 'right'},
+            {'name': '% Used', 'key': 'used_pct', 'justify': 'right'},
+            {'name': 'Free (GiB)', 'key': 'free_gb', 'justify': 'right'},
+            {'name': 'IOPS', 'key': 'iops', 'justify': 'right'},
+            {'name': 'EBS\nThroughput', 'key': 'storage_throughput', 'justify': 'right'},
+            {'name': f'Instance\n({price_unit})', 'key': 'instance_price', 'justify': 'right'},
+            {'name': f'Storage\n({price_unit})', 'key': 'storage_price', 'justify': 'right'},
+            {'name': f'IOPS\n({price_unit})', 'key': 'iops_price', 'justify': 'right'},
+            {'name': f'EBS\nThroughput\n({price_unit})', 'key': 'throughput_price', 'justify': 'right'},
+            {'name': f'Total\n({price_unit})', 'key': 'total_price', 'justify': 'right'},
+        ]
     
     # Dynamic shortcut assignment - only lowercase letters
     def assign_shortcuts():
         shortcuts = {}
         available_letters = set('abcdefghijklmnopqrstuvwxyz')
+        columns = get_columns()
         
         for col in columns:
             # Try first letter of column name
@@ -62,11 +70,6 @@ def display_rds_table(rds_instances, metrics, pricing):
                     shortcuts[letter] = col['key']
         
         return shortcuts
-    
-    shortcuts = assign_shortcuts()
-    
-    sort_state = {'key': 'name', 'ascending': True}
-    show_help = False
 
     def has_multi_az_instances():
         """Check if any instances are Multi-AZ"""
@@ -200,6 +203,8 @@ def display_rds_table(rds_instances, metrics, pricing):
     def create_help_panel(has_multi_az=False):
         # Create compact horizontal layout - maintain column order
         help_items = []
+        columns = get_columns()
+        shortcuts = assign_shortcuts()
         # Iterate through columns in their original order to maintain table sequence
         for col in columns:
             # Find the shortcut key for this column
@@ -221,7 +226,7 @@ def display_rds_table(rds_instances, metrics, pricing):
             formatted_items = [f"{item:<22}" for item in row_items]
             help_text += "  " + "  ".join(formatted_items) + "\n"
         
-        help_text += "\n[bold yellow]⌨️  Controls:[/bold yellow] [cyan]q[/cyan]=Quit  [cyan]?[/cyan]=Close Help  [cyan]ctrl+c[/cyan]=Exit"
+        help_text += "\n[bold yellow]⌨️  Controls:[/bold yellow] [cyan]q[/cyan]=Quit  [cyan]m[/cyan]=Toggle Monthly/Hourly  [cyan]?[/cyan]=Close Help  [cyan]ctrl+c[/cyan]=Exit"
         # Only show Multi-AZ explanation if there are Multi-AZ instances
         if has_multi_az:
             help_text += " [yellow]| 👥=Multi-AZ (2x pricing) | Press letter to sort, ? to close[/yellow]"
@@ -235,6 +240,7 @@ def display_rds_table(rds_instances, metrics, pricing):
         table = Table(title="Amazon RDS Instances", box=box.SIMPLE_HEAVY)
         
         # Add columns dynamically
+        columns = get_columns()
         for col in columns:
             if col['key'] == 'name':
                 # Name column with reduced width - more compact but readable
@@ -279,10 +285,25 @@ def display_rds_table(rds_instances, metrics, pricing):
             else:
                 throughput_display = "-"
             
-            # Handle pricing columns
-            storage_price_display = row['storage_price'] if row['storage_price'] == "N/A" else (f"${row['storage_price']:.4f}" if row['storage_price'] is not None else "?")
-            iops_price_display = row['iops_price'] if row['iops_price'] == "N/A" else (f"${row['iops_price']:.4f}" if row['iops_price'] is not None else "?")
-            throughput_price_display = row['throughput_price'] if row['throughput_price'] == "N/A" else (f"${row['throughput_price']:.4f}" if row['throughput_price'] is not None else "?")
+            # Handle pricing columns with monthly conversion
+            price_multiplier = 24 * 30.42 if show_monthly else 1  # Convert hourly to monthly
+            price_precision = 2 if show_monthly else 4  # Use 2 decimal places for monthly, 4 for hourly
+            
+            # Format pricing values
+            def format_price(price_value, label_value):
+                if label_value == "N/A":
+                    return "N/A"
+                elif price_value is not None:
+                    adjusted_price = price_value * price_multiplier
+                    return f"${adjusted_price:.{price_precision}f}"
+                else:
+                    return "?"
+            
+            storage_price_display = format_price(row['storage_price'], row['storage_price'])
+            iops_price_display = format_price(row['iops_price'], row['iops_price'])
+            throughput_price_display = format_price(row['throughput_price'], row['throughput_price'])
+            instance_price_display = format_price(row['instance_price'], row['instance_price'])
+            total_price_display = format_price(row['total_price'], row['total_price'])
             
             table.add_row(
                 str(row['name']),
@@ -292,11 +313,11 @@ def display_rds_table(rds_instances, metrics, pricing):
                 free_gb_display,
                 iops_display,
                 throughput_display,
-                f"${row['instance_price']:.4f}" if row['instance_price'] is not None else "?",
+                instance_price_display,
                 storage_price_display,
                 iops_price_display,
                 throughput_price_display,
-                f"${row['total_price']:.4f}" if row['total_price'] is not None else "?"
+                total_price_display
             )
         
         # Calculate totals for pricing columns
@@ -336,10 +357,14 @@ def display_rds_table(rds_instances, metrics, pricing):
                 total_overall_price += row['total_price']
         
         # Add divider row
+        columns = get_columns()
         divider_row = ["─" * 20] + ["─" * 15] * (len(columns) - 1)
         table.add_row(*divider_row, style="dim")
         
-        # Add totals row
+        # Add totals row with monthly conversion
+        price_multiplier = 24 * 30.42 if show_monthly else 1
+        price_precision = 2 if show_monthly else 4
+        
         total_row = [
             f"[bold]TOTAL ({instance_count} instances)[/bold]",  # Name column
             "",  # Class column
@@ -348,31 +373,32 @@ def display_rds_table(rds_instances, metrics, pricing):
             "",  # Free column
             "",  # IOPS column
             "",  # Throughput column
-            f"[bold]${total_instance_price:.4f}[/bold]",  # Instance pricing
-            f"[bold]${total_storage_price:.4f}[/bold]",   # Storage pricing
-            f"[bold]${total_iops_price:.4f}[/bold]",      # IOPS pricing
-            f"[bold]${total_throughput_price:.4f}[/bold]", # Throughput pricing
-            f"[bold]${total_overall_price:.4f}[/bold]"     # Total pricing
+            f"[bold]${total_instance_price * price_multiplier:.{price_precision}f}[/bold]",  # Instance pricing
+            f"[bold]${total_storage_price * price_multiplier:.{price_precision}f}[/bold]",   # Storage pricing
+            f"[bold]${total_iops_price * price_multiplier:.{price_precision}f}[/bold]",      # IOPS pricing
+            f"[bold]${total_throughput_price * price_multiplier:.{price_precision}f}[/bold]", # Throughput pricing
+            f"[bold]${total_overall_price * price_multiplier:.{price_precision}f}[/bold]"     # Total pricing
         ]
         table.add_row(*total_row, style="bold cyan")
         
-        # Add monthly estimate row with enhanced visibility
-        monthly_total = total_overall_price * 24 * 30.42  # Average month
-        monthly_row = [
-            f"[bold magenta]📅 Monthly Estimate[/bold magenta]",  # Name column with emoji
-            "",  # Class column
-            "",  # Storage column  
-            "",  # % Used column
-            "",  # Free column
-            "",  # IOPS column
-            "",  # Throughput column
-            f"[bold magenta]${total_instance_price * 24 * 30.42:.2f}[/bold magenta]",  # Instance pricing
-            f"[bold magenta]${total_storage_price * 24 * 30.42:.2f}[/bold magenta]",   # Storage pricing
-            f"[bold magenta]${total_iops_price * 24 * 30.42:.2f}[/bold magenta]",      # IOPS pricing
-            f"[bold magenta]${total_throughput_price * 24 * 30.42:.2f}[/bold magenta]", # Throughput pricing
-            f"[bold bright_magenta]${monthly_total:.2f}[/bold bright_magenta]"          # Total pricing - extra bright
-        ]
-        table.add_row(*monthly_row, style="bold magenta")
+        # Add monthly estimate row only when in hourly view
+        if not show_monthly:
+            monthly_total = total_overall_price * 24 * 30.42  # Average month
+            monthly_row = [
+                f"[bold magenta]📅 Monthly Estimate[/bold magenta]",  # Name column with emoji
+                "",  # Class column
+                "",  # Storage column  
+                "",  # % Used column
+                "",  # Free column
+                "",  # IOPS column
+                "",  # Throughput column
+                f"[bold magenta]${total_instance_price * 24 * 30.42:.2f}[/bold magenta]",  # Instance pricing
+                f"[bold magenta]${total_storage_price * 24 * 30.42:.2f}[/bold magenta]",   # Storage pricing
+                f"[bold magenta]${total_iops_price * 24 * 30.42:.2f}[/bold magenta]",      # IOPS pricing
+                f"[bold magenta]${total_throughput_price * 24 * 30.42:.2f}[/bold magenta]", # Throughput pricing
+                f"[bold bright_magenta]${monthly_total:.2f}[/bold bright_magenta]"          # Total pricing - extra bright
+            ]
+            table.add_row(*monthly_row, style="bold magenta")
         
         # Add multi-AZ explanation note only if there are Multi-AZ instances
         if has_multi_az:
@@ -392,8 +418,16 @@ def display_rds_table(rds_instances, metrics, pricing):
             ]
             table.add_row(*note_row, style="dim")
         
-        # Update table title to include monthly total for visibility
-        table.title = f"Amazon RDS Instances - Monthly Est: ${monthly_total:.2f} ({instance_count} instances)"
+        # Update table title based on current view mode
+        view_mode = "Monthly" if show_monthly else "Hourly"
+        if show_monthly:
+            total_display = total_overall_price * 24 * 30.42
+            daily_total = total_overall_price * 24
+            table.title = f"Amazon RDS Instances ({view_mode}) - Total: ${total_display:.2f}/mo | Daily: ${daily_total:.2f}/day ({instance_count} instances)"
+        else:
+            daily_total = total_overall_price * 24
+            monthly_total = total_overall_price * 24 * 30.42
+            table.title = f"Amazon RDS Instances ({view_mode}) - Total: ${total_overall_price:.4f}/hr | Daily: ${daily_total:.2f}/day | Monthly: ${monthly_total:.2f}/mo ({instance_count} instances)"
         
         return table
 
@@ -432,7 +466,7 @@ def display_rds_table(rds_instances, metrics, pricing):
 
     # Interactive table with full screen
     with Live(render_layout(), refresh_per_second=4, console=console, screen=True) as live:
-        console.print("\nPress [bold]?[/bold] for help, [bold]q[/bold] to quit.")
+        console.print("\nPress [bold]?[/bold] for help, [bold]m[/bold] to toggle monthly/hourly, [bold]q[/bold] to quit.")
         while True:
             try:
                 key = readchar.readkey().lower()
@@ -442,7 +476,11 @@ def display_rds_table(rds_instances, metrics, pricing):
                 elif key == '?':
                     show_help = not show_help  # Toggle help
                     live.update(render_layout())
-                elif key in shortcuts:
+                elif key == 'm':
+                    show_monthly = not show_monthly  # Toggle monthly/hourly view
+                    live.update(render_layout())
+                elif key in assign_shortcuts():
+                    shortcuts = assign_shortcuts()
                     if sort_state['key'] == shortcuts[key]:
                         sort_state['ascending'] = not sort_state['ascending']
                     else:
