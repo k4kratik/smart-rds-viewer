@@ -21,8 +21,27 @@ def key_to_tuple(string_key):
     return (parts[0], parts[1], parts[2])
 
 
-def load_cached_pricing():
+def clear_pricing_cache():
+    """Delete the pricing cache file if it exists."""
+    try:
+        if os.path.exists(CACHE_FILE):
+            os.remove(CACHE_FILE)
+            print("[INFO] Pricing cache cleared.")
+            return True
+        else:
+            print("[INFO] No pricing cache file found.")
+            return False
+    except Exception as e:
+        print(f"[WARN] Error clearing cache: {e}")
+        return False
+
+
+def load_cached_pricing(nocache=False):
     """Load pricing data from cache if it exists and is valid."""
+    if nocache:
+        clear_pricing_cache()
+        return None
+        
     try:
         if not os.path.exists(CACHE_FILE):
             return None
@@ -212,11 +231,12 @@ def parse_pricing_components(pricing_data, instance_class, storage_type, allocat
     }
 
 
-def parse_pricing_components_v2(instance_data, storage_data, iops_data, instance_class, storage_type, allocated_storage, iops):
-    """Parse pricing data from separate datasets for instance, storage, and IOPS costs."""
+def parse_pricing_components_v2(instance_data, storage_data, iops_data, throughput_data, instance_class, storage_type, allocated_storage, iops, storage_throughput):
+    """Parse pricing data from separate datasets for instance, storage, IOPS, and throughput costs."""
     instance_price = 0
     storage_cost_monthly = 0
     iops_cost_monthly = 0
+    throughput_cost_monthly = 0
     
     # Parse instance pricing
     for item in instance_data:
@@ -309,18 +329,63 @@ def parse_pricing_components_v2(instance_data, storage_data, iops_data, instance
                 except ValueError:
                     continue
     
+    # Parse throughput pricing (for gp3 volumes with provisioned throughput above baseline)
+    if storage_throughput and storage_throughput > 125 and storage_type.lower() == "gp3":  # gp3 baseline is 125 MB/s
+        provisioned_throughput = storage_throughput - 125  # Only charge for throughput above baseline
+        for item in throughput_data:
+            usage_type = item.get("UsageType", "")
+            price_str = item.get("Price (USD)", "0")
+            unit = item.get("Unit", "")
+            
+            # Look for gp3-throughput usage type (e.g., "aps3-rds:gp3-throughput", "use1-rds:gp3-throughput")
+            is_gp3_throughput = "gp3-throughput" in usage_type.lower()
+            
+            # Look for Single-AZ throughput (avoid Multi-AZ unless specified)
+            is_single_az = "multi-az" not in usage_type.lower() and "multi-azcluster" not in usage_type.lower()
+            
+            if (is_gp3_throughput and is_single_az and price_str != "N/A" and price_str):
+                try:
+                    price = float(price_str)
+                    if price > 0:
+                        throughput_cost_monthly = price * provisioned_throughput
+                        break
+                except ValueError:
+                    continue
+    
     return {
         "instance": instance_price,  # Already hourly
         "storage": storage_cost_monthly / 730 if storage_cost_monthly > 0 else 0,  # Convert monthly to hourly
         "iops": iops_cost_monthly / 730 if iops_cost_monthly > 0 else 0,  # Convert monthly to hourly
-        "total": instance_price + (storage_cost_monthly / 730) + (iops_cost_monthly / 730)
+        "throughput": throughput_cost_monthly / 730 if throughput_cost_monthly > 0 else 0,  # Convert monthly to hourly
+        "total": instance_price + (storage_cost_monthly / 730) + (iops_cost_monthly / 730) + (throughput_cost_monthly / 730)
     }
 
 
-def fetch_rds_pricing(rds_instances):
+def map_engine_name_for_pricing(engine):
+    """
+    Map RDS engine names to AWS Pricing API engine names.
+    """
+    engine_mapping = {
+        'aurora-mysql': 'Aurora MySQL',
+        'aurora-postgresql': 'Aurora PostgreSQL',
+        'aurora': 'Aurora MySQL',  # Default Aurora to MySQL
+        'mysql': 'MySQL',
+        'postgres': 'PostgreSQL',
+        'postgresql': 'PostgreSQL',
+        'mariadb': 'MariaDB',
+        'oracle-ee': 'Oracle',
+        'oracle-se2': 'Oracle',
+        'sqlserver-ex': 'SQL Server',
+        'sqlserver-web': 'SQL Server',
+        'sqlserver-se': 'SQL Server',
+        'sqlserver-ee': 'SQL Server',
+    }
+    return engine_mapping.get(engine.lower(), engine)
+
+def fetch_rds_pricing(rds_instances, nocache=False):
     """Fetch live on-demand hourly pricing for each RDS instance type with caching."""
-    # Try to load from cache first
-    cached_prices = load_cached_pricing()
+    # Try to load from cache first (unless nocache is specified)
+    cached_prices = load_cached_pricing(nocache=nocache)
     if cached_prices is not None:
         return cached_prices
 
@@ -340,28 +405,44 @@ def fetch_rds_pricing(rds_instances):
     
     # Fetch pricing data for each region/engine combination
     for (region, engine), instances in region_engine_groups.items():
-        print(f"[INFO] Fetching pricing for {engine} in {region}...")
+        # Map engine name for pricing API
+        pricing_engine = map_engine_name_for_pricing(engine)
+        print(f"[INFO] Fetching pricing for {engine} ({pricing_engine}) in {region}...")
         
         try:
             # Get instance pricing data for this region/engine
-            instance_pricing_data = get_rds_pricing_data(region=region, engine=engine)
+            instance_pricing_data = get_rds_pricing_data(region=region, engine=pricing_engine)
             
             # Get storage pricing data (separate API call)
             storage_pricing_data = get_rds_pricing_data(
                 region=region, 
-                engine=engine,
+                engine=pricing_engine,
                 filters=[{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Database Storage"}]
             )
             
             # Get IOPS pricing data (separate API call)
             iops_pricing_data = get_rds_pricing_data(
                 region=region,
-                engine=engine, 
+                engine=pricing_engine, 
                 filters=[{"Type": "TERM_MATCH", "Field": "productFamily", "Value": "Provisioned IOPS"}]
             )
             
+            # Get throughput pricing data (separate API call) - for gp3 volumes
+            # Note: Throughput pricing has productFamily="N/A", so we search without family filter
+            throughput_pricing_data = get_rds_pricing_data(
+                region=region,
+                engine=pricing_engine,
+                filters=[]  # No product family filter - throughput items have productFamily="N/A"
+            )
+            
+            # Filter to only throughput-related items from the unfiltered data
+            throughput_pricing_data = [
+                item for item in throughput_pricing_data 
+                if 'throughput' in item.get('UsageType', '').lower()
+            ]
+            
             if not instance_pricing_data:
-                print(f"[WARN] No instance pricing data found for {engine} in {region}")
+                print(f"[WARN] No instance pricing data found for {engine} ({pricing_engine}) in {region}")
                 for inst in instances:
                     prices[(inst["DBInstanceClass"], region, engine)] = None
                 continue
@@ -372,11 +453,12 @@ def fetch_rds_pricing(rds_instances):
                 storage_type = inst.get("StorageType", "gp3")
                 allocated_storage = inst.get("AllocatedStorage", 0)
                 iops = inst.get("Iops", 0)
+                storage_throughput = inst.get("StorageThroughput", 0)
                 
                 # Parse pricing components using separate datasets
                 price_breakdown = parse_pricing_components_v2(
-                    instance_pricing_data, storage_pricing_data, iops_pricing_data,
-                    instance_class, storage_type, allocated_storage, iops
+                    instance_pricing_data, storage_pricing_data, iops_pricing_data, throughput_pricing_data,
+                    instance_class, storage_type, allocated_storage, iops, storage_throughput
                 )
                 
                 prices[(instance_class, region, engine)] = price_breakdown

@@ -17,6 +17,11 @@ def validate_aws_credentials():
         print("  - IAM role if running on AWS infrastructure\n")
         return False
 
+def is_aurora_instance(engine):
+    """Check if the engine indicates an Aurora instance."""
+    aurora_engines = ['aurora-mysql', 'aurora-postgresql', 'aurora']
+    return engine.lower() in aurora_engines if engine else False
+
 def fetch_rds_instances():
     """Fetch all RDS instances and their key metadata."""
     rds = boto3.client('rds', region_name='ap-south-1')
@@ -25,6 +30,9 @@ def fetch_rds_instances():
         paginator = rds.get_paginator('describe_db_instances')
         for page in paginator.paginate():
             for db in page['DBInstances']:
+                engine = db.get('Engine')
+                is_aurora = is_aurora_instance(engine)
+                
                 instances.append({
                     'DBInstanceIdentifier': db.get('DBInstanceIdentifier'),
                     'DBInstanceClass': db.get('DBInstanceClass'),
@@ -33,8 +41,11 @@ def fetch_rds_instances():
                     'StorageType': db.get('StorageType'),
                     'StorageThroughput': db.get('StorageThroughput'),
                     'Endpoint': db.get('Endpoint', {}).get('Address'),
-                    'Engine': db.get('Engine'),
+                    'Engine': engine,
                     'Region': rds.meta.region_name,
+                    'IsAurora': is_aurora,
+                    'DBClusterIdentifier': db.get('DBClusterIdentifier') if is_aurora else None,
+                    'MultiAZ': db.get('MultiAZ', False),
                 })
     except (BotoCoreError, ClientError) as e:
         print(f"Error fetching RDS instances: {e}")
