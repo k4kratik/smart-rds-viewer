@@ -56,9 +56,22 @@ def main():
         print(f"    Storage: {inst.get('AllocatedStorage', 'N/A')}GB {inst.get('StorageType', 'N/A')}")
         print(f"    IOPS: {inst.get('Iops', 'N/A')}")
         
-        # Show throughput information
-        storage_throughput = inst.get('StorageThroughput', 0)
+        # Get storage info for baseline calculations
         storage_type = inst.get('StorageType', '').lower()
+        storage_throughput = inst.get('StorageThroughput', 0)
+        iops = inst.get('Iops', 0)
+        
+        # Show IOPS baseline information for gp3
+        if storage_type == 'gp3' and iops and iops > 3000:
+            billed_iops = iops - 3000
+            print(f"    📊 gp3 IOPS Baseline: 3,000 IOPS (free)")
+            print(f"    📊 Billed IOPS: {billed_iops:,} IOPS (above baseline)")
+        elif storage_type == 'gp3' and iops and iops <= 3000:
+            print(f"    📊 gp3 IOPS Baseline: All {iops:,} IOPS within free 3,000 IOPS")
+        elif storage_type in ['io1', 'io2'] and iops:
+            print(f"    📊 {storage_type.upper()}: All {iops:,} IOPS are billable")
+        
+        # Show throughput information
         print(f"    Throughput: {storage_throughput} MB/s")
         
         # Calculate billed throughput for gp3 (above 125 MB/s baseline)

@@ -311,7 +311,15 @@ def parse_pricing_components(pricing_data, instance_class, storage_type, allocat
               ("iops" in unit or "provisioned" in unit) and "month" in unit):
             iops_price_per_iop = price
             if iops and iops > 0:
-                iops_cost_monthly = iops_price_per_iop * iops
+                # For gp3 volumes, the first 3,000 IOPS are included for free
+                if storage_type.lower() == "gp3" and iops > 3000:
+                    billable_iops = iops - 3000  # Only charge for IOPS above the free baseline
+                    iops_cost_monthly = iops_price_per_iop * billable_iops
+                elif storage_type.lower() == "gp3" and iops <= 3000:
+                    iops_cost_monthly = 0  # All IOPS are within the free baseline
+                else:
+                    # For io1, io2, and other storage types, charge for all IOPS
+                    iops_cost_monthly = iops_price_per_iop * iops
             print(f"[DEBUG] Found IOPS price: ${price}/IOPS-month")
     
     print(f"[DEBUG] Final prices - Instance: ${instance_price}, Storage: ${storage_cost_monthly/730:.4f}/hr, IOPS: ${iops_cost_monthly/730:.4f}/hr")
@@ -417,7 +425,15 @@ def parse_pricing_components_v2(instance_data, storage_data, iops_data, throughp
                 try:
                     price = float(price_str)
                     if price > 0:
-                        iops_cost_monthly = price * iops
+                        # For gp3 volumes, the first 3,000 IOPS are included for free
+                        if storage_type.lower() == "gp3" and iops > 3000:
+                            billable_iops = iops - 3000  # Only charge for IOPS above the free baseline
+                            iops_cost_monthly = price * billable_iops
+                        elif storage_type.lower() == "gp3" and iops <= 3000:
+                            iops_cost_monthly = 0  # All IOPS are within the free baseline
+                        else:
+                            # For io1, io2, and other storage types, charge for all IOPS
+                            iops_cost_monthly = price * iops
                         break
                 except ValueError:
                     continue
