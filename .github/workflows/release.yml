@@ -1,318 +1,215 @@
-name: Release Build
+name: Release to PyPI
 
 on:
   push:
-    branches: [main]
-
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
-      bump_type:
-        description: "Version bump type"
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
         required: true
-        default: "patch"
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
+        type: string
 
 jobs:
-  build-amd64:
+  test:
     runs-on: ubuntu-latest
-    outputs:
-      binary-name: ${{ steps.rename.outputs.binary-name }}
-
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install build twine
 
-      - name: Build binary for AMD64
+      - name: Test package build
         run: |
-          # Ensure we're building for AMD64
-          export ARCH=amd64
-          python build.py
+          python -m build
+          twine check dist/*
 
-      - name: Rename binary
-        id: rename
+      - name: Test core functionality
         run: |
-          cd dist
-          mv smart-rds-viewer smart-rds-viewer-linux-amd64
-          echo "binary-name=smart-rds-viewer-linux-amd64" >> $GITHUB_OUTPUT
+          echo "🧪 Testing core functionality..."
+          python -c "
+          import rds_viewer, ui, fetch, metrics, pricing, reserved_instances
+          print('✅ All imports successful')
+          from fetch import validate_aws_credentials
+          print('✅ Core functions accessible')
+          print('✅ Package validation complete')
+          "
 
-      - name: Upload AMD64 binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: amd64-binary
-          path: dist/smart-rds-viewer-linux-amd64
-
-  build-arm64:
-    runs-on: ubuntu-24.04-arm
-    outputs:
-      binary-name: ${{ steps.rename.outputs.binary-name }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-      - name: Build binary for ARM64
-        run: |
-          # Native ARM64 build - no emulation needed!
-          export ARCH=arm64
-          python build.py
-
-      - name: Rename binary
-        id: rename
-        run: |
-          cd dist
-          mv smart-rds-viewer smart-rds-viewer-linux-arm64
-          echo "binary-name=smart-rds-viewer-linux-arm64" >> $GITHUB_OUTPUT
-
-      - name: Upload ARM64 binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: arm64-binary
-          path: dist/smart-rds-viewer-linux-arm64
-
-  build-macos:
-    runs-on: macos-latest
-    outputs:
-      binary-name: ${{ steps.rename.outputs.binary-name }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-
-      - name: Build binary for macOS
-        run: |
-          export ARCH=macos
-          python build.py
-
-      - name: Rename binary
-        id: rename
-        run: |
-          cd dist
-          mv smart-rds-viewer smart-rds-viewer-macos
-          echo "binary-name=smart-rds-viewer-macos" >> $GITHUB_OUTPUT
-
-      - name: Upload macOS binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-binary
-          path: dist/smart-rds-viewer-macos
-
-  create-release:
-    needs: [build-amd64, build-arm64, build-macos]
+  build:
+    needs: test
     runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Update version if manually triggered
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # Update version in pyproject.toml
+          VERSION="${{ inputs.version }}"
+          sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+          echo "Updated version to $VERSION"
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Check package
+        run: |
+          twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || contains(github.ref, 'rc') || contains(github.ref, 'beta') || contains(github.ref, 'alpha')
+    
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/smart-rds-viewer
+    
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Test install from TestPyPI
+        run: |
+          sleep 30  # Wait for package to be available
+          pip install --index-url https://test.pypi.org/simple/ smart-rds-viewer
+          smart-rds-viewer --help
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'rc') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
+    
+    environment:
+      name: pypi
+      url: https://pypi.org/p/smart-rds-viewer
+    
+    permissions:
+      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
+    
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  create-github-release:
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
     permissions:
       contents: write
-      packages: write
-    outputs:
-      release_version: ${{ steps.next_version.outputs.next_version }}
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
-      - name: Get previous tag
-        id: previous_tag
-        run: |
-          # Get the latest tag
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
-          echo "📋 Previous tag: $PREVIOUS_TAG"
-
-      - name: Calculate next version
-        id: next_version
-        run: |
-          PREVIOUS_TAG="${{ steps.previous_tag.outputs.previous_tag }}"
-          # Use input bump_type if available, otherwise default to patch
-          BUMP_TYPE="${{ inputs.bump_type || 'patch' }}"
-
-          # Remove 'v' prefix and split version
-          VERSION=${PREVIOUS_TAG#v}
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-
-          # Bump version based on type
-          case $BUMP_TYPE in
-            "major")
-              MAJOR=$((MAJOR + 1))
-              MINOR=0
-              PATCH=0
-              ;;
-            "minor")
-              MINOR=$((MINOR + 1))
-              PATCH=0
-              ;;
-            "patch")
-              PATCH=$((PATCH + 1))
-              ;;
-          esac
-
-          NEW_VERSION="v$MAJOR.$MINOR.$PATCH"
-          echo "next_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "🚀 New version: $NEW_VERSION (bump: $BUMP_TYPE)"
-
-      - name: Create tag
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git tag -a ${{ steps.next_version.outputs.next_version }} -m "Release ${{ steps.next_version.outputs.next_version }}"
-          git push origin ${{ steps.next_version.outputs.next_version }}
-
-      - name: Download binaries
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
 
-      - name: List downloaded files
+      - name: Extract version from tag
+        id: version
         run: |
-          echo "📁 Downloaded artifacts:"
-          find . -name "smart-rds-viewer*" -type f
-          echo "📁 Current directory contents:"
-          ls -la
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Prepare binaries for release
-        run: |
-          echo "📁 Current directory structure:"
-          find . -name "smart-rds-viewer*" -type f
-          echo "📁 Directories:"
-          ls -la
-
-          # Copy binaries from artifact directories to root
-          if [ -f "amd64-binary/smart-rds-viewer-linux-amd64" ]; then
-            cp "amd64-binary/smart-rds-viewer-linux-amd64" ./smart-rds-viewer-linux-amd64
-            echo "✅ AMD64 binary copied to root"
-          elif [ -f "smart-rds-viewer-linux-amd64" ]; then
-            echo "✅ AMD64 binary already in root"
-          else
-            echo "❌ AMD64 binary not found"
-            exit 1
-          fi
-
-          if [ -f "arm64-binary/smart-rds-viewer-linux-arm64" ]; then
-            cp "arm64-binary/smart-rds-viewer-linux-arm64" ./smart-rds-viewer-linux-arm64
-            echo "✅ ARM64 binary copied to root"
-          elif [ -f "smart-rds-viewer-linux-arm64" ]; then
-            echo "✅ ARM64 binary already in root"
-          else
-            echo "❌ ARM64 binary not found"
-            exit 1
-          fi
-
-          if [ -f "macos-binary/smart-rds-viewer-macos" ]; then
-            cp "macos-binary/smart-rds-viewer-macos" ./smart-rds-viewer-macos
-            echo "✅ macOS binary copied to root"
-          elif [ -f "smart-rds-viewer-macos" ]; then
-            echo "✅ macOS binary already in root"
-          else
-            echo "❌ macOS binary not found"
-            exit 1
-          fi
-
-          chmod +x smart-rds-viewer-linux-amd64 smart-rds-viewer-linux-arm64 smart-rds-viewer-macos
-          echo "✅ Binaries prepared and made executable"
-
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.next_version.outputs.next_version }}
-          name: Release ${{ steps.next_version.outputs.next_version }}
-          files: |
-            smart-rds-viewer-linux-amd64
-            smart-rds-viewer-linux-arm64
-            smart-rds-viewer-macos
+          name: Smart RDS Viewer v${{ steps.version.outputs.version }}
+          files: dist/*
           body: |
-            ## Smart RDS Viewer ${{ steps.next_version.outputs.next_version }}
+            ## Smart RDS Viewer v${{ steps.version.outputs.version }}
 
-            ### Downloads
-            - **Linux AMD64**: `smart-rds-viewer-linux-amd64`
-            - **Linux ARM64**: `smart-rds-viewer-linux-arm64`
-            - **macOS**: `smart-rds-viewer-macos`
+            ### 🚀 Installation
 
-            ### Usage
             ```bash
-            # Linux
-            chmod +x smart-rds-viewer-linux-amd64
-            ./smart-rds-viewer-linux-amd64
-
-            # macOS
-            chmod +x smart-rds-viewer-macos
-            ./smart-rds-viewer-macos
+            pip install smart-rds-viewer
             ```
 
-            ### Requirements
+            ### 🎯 Usage
+
+            ```bash
+            # Run the viewer
+            smart-rds-viewer
+
+            # Alternative command
+            rds-viewer
+
+            # Force fresh data (bypass cache)
+            smart-rds-viewer --nocache
+            ```
+
+            ### 📦 Package Distribution Files
+
+            This release includes both wheel and source distributions for maximum compatibility.
+
+            ### 🔗 PyPI Package
+
+            Available on PyPI: https://pypi.org/project/smart-rds-viewer/${{ steps.version.outputs.version }}/
+
+            ### 🛠️ Requirements
+
+            - Python 3.8+
             - AWS credentials configured
-            - RDS, CloudWatch, and Pricing API permissions
+            - Required AWS permissions for RDS, CloudWatch, and Pricing APIs
+
+            ### 📚 Documentation
+
+            See the [README](https://github.com/${{ github.repository }}#readme) for complete setup and usage instructions.
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # update-homebrew:
-  #   needs: create-release
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
-
-  #     - name: Get release version
-  #       id: release_version
-  #       run: |
-  #         # Use version from create-release job (remove v prefix if present)
-  #         RELEASE_VERSION="${{ needs.create-release.outputs.release_version }}"
-  #         CLEAN_VERSION="${RELEASE_VERSION#v}"
-  #         echo "release_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
-  #         echo "📋 Release version: $CLEAN_VERSION"
-
-  #     - name: Update Homebrew Formula
-  #       run: |
-  #         # Update formula with new version and SHA256 hashes
-  #         ruby scripts/update-formula.rb ${{ steps.release_version.outputs.release_version }}
-
-  #         # Commit and push formula updates
-  #         git config --local user.email "github-actions[bot]@users.noreply.github.com"
-  #         git config --local user.name "github-actions[bot]"
-  #         git add deployment/Formula/smart-rds-viewer.rb
-  #         git commit -m "Update formula for v${{ steps.release_version.outputs.release_version }}"
-  #         git push origin main
-
-  #         echo "✅ Homebrew formula updated for v${{ steps.release_version.outputs.release_version }}"

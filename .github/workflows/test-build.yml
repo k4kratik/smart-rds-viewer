@@ -1,4 +1,4 @@
-name: Test Build
+name: Test Package
 
 on:
   push:
@@ -7,7 +7,67 @@ on:
     branches: [main]
 
 jobs:
-  test-build:
+  test-package:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install build twine pytest
+
+      - name: Test package building
+        run: |
+          echo "🔨 Building Python package..."
+          python -m build
+          echo "✅ Package built successfully"
+
+      - name: Validate package
+        run: |
+          echo "🔍 Validating package..."
+          twine check dist/*
+          echo "✅ Package validation passed"
+
+      - name: Test core functionality
+        run: |
+          echo "🧪 Testing core functionality..."
+          python -c "
+          import rds_viewer, ui, fetch, metrics, pricing, reserved_instances
+          print('✅ All imports successful')
+          from fetch import validate_aws_credentials
+          print('✅ Core functions accessible')
+          print('✅ Project validation complete')
+          "
+
+      - name: Test CLI entry points
+        run: |
+          echo "🎯 Testing CLI entry points..."
+          pip install -e .
+          smart-rds-viewer --help
+          rds-viewer --help
+          echo "✅ CLI commands working"
+
+      - name: Test package installation
+        run: |
+          echo "📦 Testing package installation..."
+          pip uninstall smart-rds-viewer -y
+          pip install dist/*.whl
+          smart-rds-viewer --help
+          echo "✅ Package installation test passed"
+
+  lint-and-format:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,26 +77,28 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install linting tools
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          pip install flake8 black isort
 
-      - name: Test build validation
+      - name: Check code formatting with black
         run: |
-          echo "🔨 Running project validation..."
-          make build
+          echo "🎨 Checking code formatting..."
+          black --check --diff .
+        continue-on-error: true
 
-      - name: Test core functionality
+      - name: Check import sorting with isort
         run: |
-          echo "🧪 Testing core functionality..."
-          python -c "
-          import rds_viewer, ui, fetch, metrics, pricing
-          print('✅ All imports successful')
-          from fetch import validate_aws_credentials
-          print('✅ Core functions accessible')
-          print('✅ Project validation complete')
-          "
+          echo "📂 Checking import sorting..."
+          isort --check-only --diff .
+        continue-on-error: true
+
+      - name: Lint with flake8
+        run: |
+          echo "🔍 Linting code..."
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true

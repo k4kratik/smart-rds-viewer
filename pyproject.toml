@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smart-rds-viewer"
+version = "1.0.0"
+description = "Your terminal companion for monitoring Amazon RDS instances with real-time data, pricing, and interactive insights!"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Smart RDS Viewer", email = "hello@kratik.dev"}
+]
+maintainers = [
+    {name = "Smart RDS Viewer", email = "hello@kratik.dev"}
+]
+keywords = ["aws", "rds", "monitoring", "cloudwatch", "pricing", "terminal", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Environment :: Console :: Curses",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "boto3",
+    "rich",
+    "typer",
+    "readchar"
+]
+
+[project.urls]
+Homepage = "https://github.com/k4kratik/smart-rds-viewer"
+Repository = "https://github.com/k4kratik/smart-rds-viewer"
+Documentation = "https://github.com/k4kratik/smart-rds-viewer#readme"
+"Bug Reports" = "https://github.com/k4kratik/smart-rds-viewer/issues"
+
+[project.scripts]
+smart-rds-viewer = "rds_viewer:main"
+rds-viewer = "rds_viewer:main"
+
+[tool.setuptools]
+py-modules = ["rds_viewer", "fetch", "metrics", "pricing", "reserved_instances", "ui"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["scripts*", "benchmarks*", "deployment*", ".venv*", ".github*", "build*", "dist*"]

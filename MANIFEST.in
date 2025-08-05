@@ -1,0 +1,21 @@
+# Include the README and requirements
+include README.md
+include requirements.txt
+include LICENSE*
+
+# Include documentation
+recursive-include docs *.md *.png *.jpg *.jpeg *.gif
+
+# Exclude build artifacts and development files
+# Exclude development and build files
+exclude Makefile
+recursive-exclude build *
+recursive-exclude dist *
+recursive-exclude .git *
+recursive-exclude __pycache__ *
+recursive-exclude *.pyc
+recursive-exclude .venv *
+recursive-exclude .github *
+recursive-exclude scripts *
+recursive-exclude benchmarks *
+recursive-exclude deployment *
