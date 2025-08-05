@@ -54,7 +54,35 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 ### Quick Start
 
-#### Option 1: Run as Python Script
+#### Option 1: Install via pip (Recommended)
+
+```bash
+# Install the package
+pip install smart-rds-viewer
+
+# Run the viewer
+smart-rds-viewer
+```
+
+#### Option 2: Development/Local Installation
+
+```bash
+# Clone and setup
+git clone <your-repo>
+cd smart-rds-viewer
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode
+pip install -e .
+
+# Run the viewer
+smart-rds-viewer
+```
+
+#### Option 3: Run as Python Script
 
 ```bash
 # Clone and setup
@@ -78,9 +106,15 @@ python rds_viewer.py
 
 ```bash
 # Standard run
-python rds_viewer.py
+smart-rds-viewer
+
+# Alternative command (shorter)
+rds-viewer
 
 # Force fresh pricing data (bypass cache)
+smart-rds-viewer --nocache
+
+# Legacy method (if running from source)
 python rds_viewer.py --nocache
 ```
 
@@ -154,7 +188,7 @@ smart-rds-viewer/
 ├── metrics.py                # CloudWatch metrics (batch API)
 ├── pricing.py                # AWS Pricing API (parallelized)
 ├── requirements.txt          # Python dependencies
-├── build.py                  # Binary build script
+├── pyproject.toml            # Package configuration
 ├── Makefile                  # Build automation
 ├── README.md                 # Project documentation
 ├── docs/                     # Documentation & Images
@@ -164,7 +198,7 @@ smart-rds-viewer/
 │   ├── PRE-COMMIT-HOOK.md    # Git pre-commit hook setup
 │   ├── image.png             # Main demo screenshot
 │   └── image-help.png        # Help menu screenshot
-├── deployment/               # Build & Deployment
+├── deployment/               # Deployment configs
 │   └── Formula/              # Homebrew formula
 │       └── smart-rds-viewer.rb
 ├── benchmarks/               # Performance Testing
@@ -186,6 +220,22 @@ The codebase includes significant performance optimizations:
 - **Data filtering**: Reduces API response sizes by 80%+
 
 **Performance Results**: 72% faster than original (6.7s fresh, 1.6s cached)
+
+## 📦 Publishing to PyPI
+
+For maintainers: To publish this package to PyPI so users can install with `pip install smart-rds-viewer`, see the detailed guide in [PUBLISHING.md](PUBLISHING.md).
+
+**Quick publishing workflow:**
+```bash
+# 1. Build package
+rm -rf dist/ && pip wheel . --no-deps -w dist/
+
+# 2. Test on TestPyPI
+twine upload --repository testpypi dist/smart_rds_viewer-*.whl
+
+# 3. Upload to PyPI
+twine upload dist/smart_rds_viewer-*.whl
+```
 
 ## 🤝 Contributing
 

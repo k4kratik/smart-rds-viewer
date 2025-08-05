@@ -1,4 +1,4 @@
-.PHONY: build clean install run lint binary benchmark help
+.PHONY: build clean install run lint package benchmark help
 
 # Default target
 all: build
@@ -16,7 +16,7 @@ build:
 # Clean build artifacts
 clean:
 	@echo "🧹 Cleaning build artifacts..."
-	@rm -rf build/ dist/ *.spec
+	@rm -rf build/ dist/ *.egg-info/
 	@echo "✓ Cleaned build artifacts"
 
 # Install dependencies
@@ -25,7 +25,7 @@ install:
 	@pip3 install -r requirements.txt
 	@echo "✓ Dependencies installed"
 
-# Run the Python version directly
+# Run the Smart RDS Viewer
 run:
 	@echo "🚀 Running Smart RDS Viewer..."
 	@python3 rds_viewer.py
@@ -36,10 +36,12 @@ lint:
 	@python3 -m py_compile *.py
 	@echo "✓ Syntax check passed"
 
-# Build binary executable  
-binary:
-	@echo "🔨 Building binary executable..."
-	@python3 build.py
+# Build Python package
+package:
+	@echo "📦 Building Python package..."
+	@pip3 install twine
+	@pip3 wheel . --no-deps -w dist/
+	@echo "✓ Package built successfully"
 
 # Simple performance benchmark
 benchmark:
@@ -55,6 +57,6 @@ help:
 	@echo "make install    - Install Python dependencies"
 	@echo "make run        - Run the Python version"
 	@echo "make lint       - Run code quality checks"
-	@echo "make binary     - Build binary executable"
+	@echo "make package    - Build Python package for PyPI"
 	@echo "make benchmark  - Run quick performance benchmark"
 	@echo "make help       - Show this help message" 

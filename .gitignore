@@ -29,8 +29,7 @@ ENV/
 env/
 .venv/
 
-# PyInstaller
-*.manifest
+# Package building
 *.spec
 
 # Installer logs
