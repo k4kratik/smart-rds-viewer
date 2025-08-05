@@ -308,7 +308,7 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
         return Panel(help_text, title="💡 Help & Shortcuts", 
                     border_style="bright_blue", expand=True, padding=(1, 2))
 
-    def render_table(has_multi_az=False):
+    def render_table(has_multi_az=False, blur=False):
         table = Table(title="Amazon RDS Instances", box=box.SIMPLE_HEAVY)
         
         # Add columns dynamically
@@ -545,15 +545,50 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
             monthly_total = total_overall_price * 24 * 30.42
             table.title = f"Amazon RDS Instances ({view_mode}) - Total: ${total_overall_price:.4f}/hr | Daily: ${daily_total:.2f}/day | Monthly: ${monthly_total:.2f}/mo ({instance_count} instances){ri_info}"
         
+        # Apply blur effect when help is shown
+        if blur:
+            # Create strong blur effect with multiple layers
+            # Layer 1: Dim the table content heavily
+            blurred_table = Panel(
+                table, 
+                style="dim bold",  # Double styling for stronger effect
+                border_style="dim",
+                padding=(0, 0)
+            )
+            
+            # Layer 2: Add translucent overlay panel for stronger blur
+            return Panel(
+                blurred_table,
+                style="on grey11 dim",  # Dark background overlay with dim
+                border_style="bright_black", 
+                padding=(0, 0)
+            )
+        
         return table
 
-    def create_ri_utilization_table():
+    def create_ri_utilization_table(blur=False):
         """Create a table showing Reserved Instance utilization."""
         if not ri_matches or not ri_matches.get('ri_utilization'):
             # Create empty table with message
             table = Table(title="Reserved Instance Utilization - No RIs found", box=box.SIMPLE_HEAVY)
             table.add_column("Message", justify="center", style="dim")
             table.add_row("No Reserved Instances found in this region.")
+            
+            # Apply blur effect when help is shown
+            if blur:
+                # Create strong blur effect with multiple layers
+                blurred_table = Panel(
+                    table, 
+                    style="dim bold",
+                    border_style="dim",
+                    padding=(0, 0)
+                )
+                return Panel(
+                    blurred_table,
+                    style="on grey11 dim",
+                    border_style="bright_black", 
+                    padding=(0, 0)
+                )
             return table
         
         table = Table(title="Reserved Instance Utilization", box=box.SIMPLE_HEAVY)
@@ -678,6 +713,22 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
                 style="bold cyan"
             )
         
+        # Apply blur effect when help is shown
+        if blur:
+            # Create strong blur effect with multiple layers
+            blurred_table = Panel(
+                table, 
+                style="dim bold",
+                border_style="dim",
+                padding=(0, 0)
+            )
+            return Panel(
+                blurred_table,
+                style="on grey11 dim",
+                border_style="bright_black", 
+                padding=(0, 0)
+            )
+        
         return table
 
     def render_layout():
@@ -691,8 +742,8 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
                 Layout(name="help", ratio=2)
             )
             
-            # Main content (table)
-            table = render_table(has_multi_az)
+            # Main content (table) with blur effect
+            table = render_table(has_multi_az, blur=True)
             layout["main"].update(table)
             
             # Help popup at bottom
