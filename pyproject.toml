@@ -57,4 +57,4 @@ py-modules = ["rds_viewer", "fetch", "metrics", "pricing", "reserved_instances",
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["*"]
-exclude = ["scripts*", "benchmarks*", "deployment*", ".venv*", ".github*", "build*", "dist*"]
+exclude = ["scripts*", "benchmarks*", "deployment*", "docs*", ".venv*", ".github*", "build*", "dist*"]
