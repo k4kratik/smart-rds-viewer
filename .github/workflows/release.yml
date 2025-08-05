@@ -3,11 +3,11 @@ name: Release to PyPI
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.0.0)'
+        description: "Version to release (e.g., 1.0.0)"
         required: true
         type: string
 
@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-    
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install build dependencies
         run: |
@@ -93,14 +93,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || contains(github.ref, 'rc') || contains(github.ref, 'beta') || contains(github.ref, 'alpha')
-    
+
     environment:
       name: testpypi
       url: https://test.pypi.org/p/smart-rds-viewer
-    
+
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-    
+      id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
+
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -123,14 +123,14 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, 'rc') && !contains(github.ref, 'beta') && !contains(github.ref, 'alpha')
-    
+
     environment:
       name: pypi
       url: https://pypi.org/p/smart-rds-viewer
-    
+
     permissions:
-      id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
-    
+      id-token: write # IMPORTANT: this permission is mandatory for trusted publishing
+
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -145,10 +145,10 @@ jobs:
     needs: [build, publish-pypi]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    
+
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
