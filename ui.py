@@ -90,7 +90,7 @@ def display_rds_table(rds_instances, metrics, pricing):
             is_multi_az = inst.get('MultiAZ', False)
             display_name = f"{name} 👥" if is_multi_az else name
             
-            price_info = pricing.get((klass, inst['Region'], inst['Engine']))
+            price_info = pricing.get((name, inst['Region'], inst['Engine']))  # Use instance ID as key
             free = metrics.get(name)  # Use original name for metrics lookup
             
             # Get storage type for gp2 detection

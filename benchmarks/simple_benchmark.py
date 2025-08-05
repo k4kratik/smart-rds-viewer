@@ -6,6 +6,11 @@ Quick performance checks for specific components
 
 import time
 import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fetch import fetch_rds_instances, validate_aws_credentials
 from metrics import fetch_storage_metrics
 from pricing import fetch_rds_pricing, clear_pricing_cache

@@ -527,12 +527,13 @@ def fetch_pricing_for_region_engine(region, engine, instances):
         
         if not instance_pricing_data:
             print(f"[WARN] No instance pricing data found for {engine} ({pricing_engine}) in {region}")
-            return {(inst["DBInstanceClass"], region, engine): None for inst in instances}
+            return {(inst["DBInstanceIdentifier"], region, engine): None for inst in instances}
         
         # Process each instance in this group
         result_prices = {}
         for inst in instances:
             instance_class = inst["DBInstanceClass"]
+            instance_id = inst["DBInstanceIdentifier"]  # Add instance identifier
             storage_type = inst.get("StorageType", "gp3")
             allocated_storage = inst.get("AllocatedStorage", 0)
             iops = inst.get("Iops", 0)
@@ -544,16 +545,17 @@ def fetch_pricing_for_region_engine(region, engine, instances):
                 instance_class, storage_type, allocated_storage, iops, storage_throughput
             )
             
-            result_prices[(instance_class, region, engine)] = price_breakdown
+            # Use instance identifier as key to prevent overwriting instances with same class
+            result_prices[(instance_id, region, engine)] = price_breakdown
             
             if price_breakdown["total"] == 0:
-                print(f"[WARN] No price found for {instance_class} in {region} (engine: {engine})")
+                print(f"[WARN] No price found for {instance_id} ({instance_class}) in {region} (engine: {engine})")
         
         return result_prices
                 
     except Exception as e:
         print(f"[ERROR] Pricing API failed for {engine} in {region}: {e}")
-        return {(inst["DBInstanceClass"], region, engine): None for inst in instances}
+        return {(inst["DBInstanceIdentifier"], region, engine): None for inst in instances}
 
 
 def fetch_rds_pricing(rds_instances, nocache=False):
@@ -598,7 +600,7 @@ def fetch_rds_pricing(rds_instances, nocache=False):
                 # Add None entries for failed instances
                 instances = region_engine_groups[(region, engine)]
                 for inst in instances:
-                    prices[(inst["DBInstanceClass"], region, engine)] = None
+                    prices[(inst["DBInstanceIdentifier"], region, engine)] = None
 
     # Save to cache
     save_cached_pricing(prices)
