@@ -8,6 +8,9 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 ![Smart RDS Viewer Demo - Help Menu](docs/image-help.png)
 
+![Smart RDS Viewer Demo - RI Utilization](docs/image-ri.png)
+
+
 ## ✨ Features
 
 ### 🔍 **Real-time Data Fetching**
