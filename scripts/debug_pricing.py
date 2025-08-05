@@ -46,7 +46,7 @@ def main():
     print("\n📊 PRICING RESULTS:")
     
     for inst in rds_instances:
-        key = (inst['DBInstanceClass'], inst['Region'], inst['Engine'])
+        key = (inst['DBInstanceIdentifier'], inst['Region'], inst['Engine'])
         price_info = pricing.get(key)
         
         print(f"\n🏷️  {inst['DBInstanceIdentifier']}:")
