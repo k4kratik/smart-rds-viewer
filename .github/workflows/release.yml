@@ -2,11 +2,6 @@ name: Manual Deploy to PyPI
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to deploy to PyPI"
-        required: true
-        type: string
 
 jobs:
   deploy-to-pypi:
@@ -24,8 +19,19 @@ jobs:
       - name: Checkout specific tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.ref }}
           fetch-depth: 0
+
+      - name: Validate ref is a tag
+        run: |
+          echo "🔍 Selected ref: ${{ github.ref }}"
+          echo "🏷️ Tag name: ${{ github.ref_name }}"
+          if [[ "${{ github.ref }}" != refs/tags/* ]]; then
+            echo "❌ Error: Must select a tag, not a branch!"
+            echo "💡 Please use the 'Tags' tab in 'Select ref' section"
+            exit 1
+          fi
+          echo "✅ Tag '${{ github.ref_name }}' selected!"
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -40,7 +46,7 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          TAG="${{ inputs.tag }}"
+          TAG="${{ github.ref_name }}"
           VERSION=${TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "📋 Deploying version: $VERSION"
@@ -67,11 +73,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ inputs.tag }}
-          name: Smart RDS Viewer ${{ inputs.tag }}
+          tag_name: ${{ github.ref_name }}
+          name: Smart RDS Viewer ${{ github.ref_name }}
           files: dist/*
           body: |
-            ## Smart RDS Viewer ${{ inputs.tag }}
+            ## Smart RDS Viewer ${{ github.ref_name }}
 
             ### 🚀 Installation
             ```bash
@@ -92,7 +98,7 @@ jobs:
       - name: Summary
         run: |
           echo "🎉 Production deployment complete!"
-          echo "🏷️ Tag: ${{ inputs.tag }}"
+          echo "🏷️ Tag: ${{ github.ref_name }}"
           echo "📦 Version: ${{ steps.version.outputs.version }}"
           echo "🚀 Deployed to PyPI"
           echo "📋 PyPI: https://pypi.org/project/smart-rds-viewer/"
