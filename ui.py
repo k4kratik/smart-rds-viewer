@@ -230,11 +230,11 @@ def display_rds_table(rds_instances, metrics, pricing):
         help_text += "[bold yellow]💰 Pricing View:[/bold yellow] [cyan]m[/cyan]=Toggle Monthly/Hourly pricing display"
         # Only show Multi-AZ explanation if there are Multi-AZ instances
         if has_multi_az:
-            help_text += " [yellow]| 👥=Multi-AZ (2x pricing) | Press letter to sort, ? to close[/yellow]"
+            help_text += " [yellow]| 👥=Multi-AZ (2x pricing) | Press letter to sort, ? to close this help menu.[/yellow]"
         else:
-            help_text += " [yellow]| Press letter to sort, ? to close[/yellow]"
+            help_text += " [yellow]| Press letter to sort, ? to close this help menu.[/yellow]"
         
-        return Panel(help_text, title="💡 Help & Shortcuts - Press ? to close", 
+        return Panel(help_text, title="💡 Help & Shortcuts - Press ? to close this help menu.", 
                     border_style="bright_blue", expand=True, padding=(0, 1))
 
     def render_table(has_multi_az=False):

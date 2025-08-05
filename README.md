@@ -93,20 +93,20 @@ python rds_viewer.py --nocache
 
 ### Column Shortcuts (Auto-assigned, match table order)
 
-| Key | Column                        | Description                           |
-| --- | ----------------------------- | ------------------------------------- |
+| Key | Column                        | Description                            |
+| --- | ----------------------------- | -------------------------------------- |
 | `n` | Name                          | Instance identifier (👥 = Multi-AZ)   |
 | `c` | Class                         | Instance type (db.r5.large, etc.)     |
-| `s` | Storage (GB)                  | Allocated storage                     |
-| `u` | % Used                        | Storage utilization percentage        |
-| `f` | Free (GiB)                    | Available storage space               |
-| `i` | IOPS                          | Provisioned IOPS                      |
-| `e` | EBS Throughput                | Storage throughput (MB/s)             |
-| `t` | Instance ($/hr or $/mo)       | Instance pricing (toggles with `m`)   |
-| `o` | Storage ($/hr or $/mo)        | Storage pricing (toggles with `m`)    |
-| `p` | IOPS ($/hr or $/mo)           | IOPS pricing (toggles with `m`)       |
-| `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`) |
-| `a` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)         |
+| `s` | Storage (GB)                  | Allocated storage                      |
+| `u` | % Used                        | Storage utilization percentage         |
+| `f` | Free (GiB)                    | Available storage space                |
+| `i` | IOPS                          | Provisioned IOPS                       |
+| `e` | EBS Throughput                | Storage throughput (MB/s)              |
+| `t` | Instance ($/hr or $/mo)       | Instance pricing (toggles with `m`)    |
+| `o` | Storage ($/hr or $/mo)        | Storage pricing (toggles with `m`)     |
+| `p` | IOPS ($/hr or $/mo)           | IOPS pricing (toggles with `m`)        |
+| `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`)  |
+| `a` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)          |
 
 ## 🔧 Technical Details
 
@@ -147,28 +147,29 @@ The AI assistant helped transform a simple concept into a comprehensive, product
 
 ```
 smart-rds-viewer/
-├── Core Application
-│   ├── __main__.py           # Entry point
-│   ├── rds_viewer.py         # Main application logic
-│   ├── ui.py                 # Rich terminal UI components
-│   ├── fetch.py              # RDS data fetching (optimized)
-│   ├── metrics.py            # CloudWatch metrics (batch API)
-│   ├── pricing.py            # AWS Pricing API (parallelized)
-│   ├── requirements.txt      # Python dependencies
-│   ├── Makefile              # Build automation (kept in root)
-│   └── README.md             # Project documentation
+├── __main__.py               # Entry point
+├── rds_viewer.py             # Main application logic
+├── ui.py                     # Rich terminal UI components
+├── fetch.py                  # RDS data fetching (optimized)
+├── metrics.py                # CloudWatch metrics (batch API)
+├── pricing.py                # AWS Pricing API (parallelized)
+├── requirements.txt          # Python dependencies
+├── build.py                  # Binary build script
+├── Makefile                  # Build automation
+├── README.md                 # Project documentation
 ├── docs/                     # Documentation & Images
 │   ├── BENCHMARKING.md       # Performance benchmarks
 │   ├── HOMEBREW.md           # Homebrew installation guide
 │   ├── IMPROVEMENTS-1.md     # Development history
+│   ├── PRE-COMMIT-HOOK.md    # Git pre-commit hook setup
 │   ├── image.png             # Main demo screenshot
 │   └── image-help.png        # Help menu screenshot
 ├── deployment/               # Build & Deployment
-│   ├── build.py              # Binary build script
 │   └── Formula/              # Homebrew formula
-├── benchmarks/              # Performance Testing
+│       └── smart-rds-viewer.rb
+├── benchmarks/               # Performance Testing
 │   └── simple_benchmark.py   # Performance benchmarks
-└── scripts/                 # Utility Scripts
+└── scripts/                  # Utility Scripts
     ├── debug_pricing.py      # Pricing debugging
     ├── inspect_pricing.py    # Pricing analysis
     └── update-formula.rb     # Homebrew formula updates
