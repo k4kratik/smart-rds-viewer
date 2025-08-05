@@ -267,7 +267,7 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
                 help_items.append((key, col_name_clean))
         
         # Start building the help text
-        help_text = "📋 [bold white]Current Key Mappings (No Conflicts)[/bold white]\n\n"
+        help_text = "📋 [bold white]Current Key Mappings[/bold white]\n\n"
         
         # Arrange in 3-column grid format (similar to the image)
         items_per_row = 3
@@ -305,7 +305,7 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
         
         help_text += "\n[dim]Press any letter to sort by that column, [cyan]?[/cyan] to close this help.[/dim]"
         
-        return Panel(help_text, title="💡 Help & Shortcuts", 
+        return Panel(help_text, title="💡 Help & Shortcuts - Press [cyan]?[/cyan] to close", 
                     border_style="bright_blue", expand=True, padding=(1, 2))
 
     def render_table(has_multi_az=False, blur=False):
