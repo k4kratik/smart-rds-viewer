@@ -111,6 +111,9 @@ smart-rds-viewer
 # Alternative command (shorter)
 rds-viewer
 
+# Check version
+smart-rds-viewer --version
+
 # Force fresh pricing data (bypass cache)
 smart-rds-viewer --nocache
 

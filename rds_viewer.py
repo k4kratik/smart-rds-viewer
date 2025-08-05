@@ -7,10 +7,23 @@ from reserved_instances import fetch_reserved_instances, match_reserved_instance
 from ui import display_rds_table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+# Import for version handling
+from importlib.metadata import version
+
+def get_version():
+    """Get package version dynamically from metadata"""
+    try:
+        return version("smart-rds-viewer")
+    except Exception:
+        # Fallback version if package metadata is not available (e.g., during development)
+        return "development"
+
 def main():
     parser = argparse.ArgumentParser(description="RDS Viewer - Display RDS instances with metrics and pricing")
     parser.add_argument("--nocache", action="store_true", 
                       help="Force fresh data by clearing pricing cache")
+    parser.add_argument("--version", action="version", 
+                      version=f"smart-rds-viewer {get_version()}")
     args = parser.parse_args()
 
     if not validate_aws_credentials():
