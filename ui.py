@@ -252,54 +252,61 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
         return sorted(rows, key=keyfunc, reverse=not ascending)
 
     def create_help_panel(has_multi_az=False):
-        # Create compact horizontal layout - maintain column order
-        help_items = []
         columns = get_columns()
         shortcuts = assign_shortcuts()
-        # Iterate through columns in their original order to maintain table sequence
+        
+        # Build key mappings in organized format
+        help_items = []
         for col in columns:
-            # Find the shortcut key for this column
             key = next((k for k, v in shortcuts.items() if v == col['key']), None)
             if key:
                 # Clean up column name for display
-                col_name_clean = col['name'].replace('\n', ' ').strip()  # Remove newlines and extra spaces
-                # Shorten common terms for more compact display
-                col_name_clean = col_name_clean.replace('($/hr)', 'pricing').replace('EBS Throughput', 'Throughput')
-                help_items.append(f"[cyan]{key}[/cyan]={col_name_clean}")
+                col_name_clean = col['name'].replace('\n', ' ').strip()
+                col_name_clean = col_name_clean.replace('($/hr)', '').replace('($/mo)', '').strip()
+                col_name_clean = col_name_clean.replace('EBS Throughput', 'EBS Throughput')
+                help_items.append((key, col_name_clean))
         
-        # Arrange shortcuts in horizontal rows (4 items per row) with proper spacing
-        items_per_row = 4
-        help_text = "[bold yellow]📋 Sorting Shortcuts:[/bold yellow]\n"
+        # Start building the help text
+        help_text = "📋 [bold white]Current Key Mappings (No Conflicts)[/bold white]\n\n"
         
+        # Arrange in 3-column grid format (similar to the image)
+        items_per_row = 3
         for i in range(0, len(help_items), items_per_row):
             row_items = help_items[i:i + items_per_row]
-            # Format each item with better spacing - wider for 'pricing' text
-            formatted_items = [f"{item:<22}" for item in row_items]
-            help_text += "  " + "  ".join(formatted_items) + "\n"
+            row_parts = []
+            
+            for key, name in row_items:
+                # Format each item as "key → name" with consistent spacing
+                formatted_item = f"[cyan]{key}[/cyan] → {name}"
+                row_parts.append(f"{formatted_item:<25}")
+            
+            help_text += "  " + "  ".join(row_parts) + "\n"
         
-        help_text += "\n[bold yellow]⌨️  Controls:[/bold yellow] [cyan]q[/cyan]=Quit  [cyan]?[/cyan]=Close Help  [cyan]ctrl+c[/cyan]=Exit\n"
+        # Add special controls section
+        help_text += "\n🎮 [bold white]Special Controls[/bold white]\n\n"
         
-        # Pricing view controls
-        pricing_controls = "[bold yellow]💰 Pricing View:[/bold yellow] [cyan]m[/cyan]=Toggle Monthly/Hourly pricing display"
+        # First row of special controls
+        help_text += f"  [cyan]?[/cyan] → Help{'':<20}[cyan]m[/cyan] → Monthly/Hourly{'':<8}"
         if ri_matches:
-            pricing_controls += "  [cyan]u[/cyan]=Toggle RI Utilization Table"
-        help_text += pricing_controls + "\n"
+            help_text += "[cyan]v[/cyan] → RI Utilization\n"
+        else:
+            help_text += "\n"
         
-        # Visual indicators
+        # Second row of special controls
+        help_text += f"  [cyan]q[/cyan] → Quit{'':<20}[cyan]Ctrl+C[/cyan] → Exit\n"
+        
+        # Visual indicators section
         if ri_matches or has_multi_az:
-            help_text += "[bold yellow]🎨 Visual Indicators:[/bold yellow] "
-            indicators = []
+            help_text += "\n🎨 [bold white]Visual Indicators[/bold white]\n"
             if ri_matches:
-                indicators.append("Instance names: [green]Green=100% RI[/green] [yellow]Yellow=Partial RI[/yellow]")
+                help_text += "  Instance names: [green]Green=100% RI[/green] [yellow]Yellow=Partial RI[/yellow]\n"
             if has_multi_az:
-                indicators.append("👥=Multi-AZ (2x pricing)")
-            help_text += "  ".join(indicators) + "\n"
+                help_text += "  👥 = Multi-AZ instances (2x pricing)\n"
         
-        # General instructions
-        help_text += "[bold yellow]📋 Instructions:[/bold yellow] Press any letter to sort by that column, ? to close this help menu."
+        help_text += "\n[dim]Press any letter to sort by that column, [cyan]?[/cyan] to close this help.[/dim]"
         
-        return Panel(help_text, title="💡 Help & Shortcuts - Press ? to close this help menu.", 
-                    border_style="bright_blue", expand=True, padding=(0, 1))
+        return Panel(help_text, title="💡 Help & Shortcuts", 
+                    border_style="bright_blue", expand=True, padding=(1, 2))
 
     def render_table(has_multi_az=False):
         table = Table(title="Amazon RDS Instances", box=box.SIMPLE_HEAVY)
@@ -715,7 +722,7 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
     with Live(render_layout(), refresh_per_second=4, console=console, screen=True) as live:
         controls_msg = "\nPress [bold]?[/bold] for help, [bold]m[/bold] to toggle monthly/hourly"
         if ri_matches:
-            controls_msg += ", [bold]u[/bold] for RI utilization"
+            controls_msg += ", [bold]v[/bold] for RI utilization"
         controls_msg += ", [bold]q[/bold] to quit."
         console.print(controls_msg)
         while True:
@@ -730,17 +737,18 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
                 elif key == 'm':
                     show_monthly = not show_monthly  # Toggle monthly/hourly view
                     live.update(render_layout())
-                elif key == 'u' and ri_matches:
+                elif key == 'v' and ri_matches:
                     show_ri_table = not show_ri_table  # Toggle RI utilization table
                     live.update(render_layout())
-                elif key in assign_shortcuts():
+                else:
                     shortcuts = assign_shortcuts()
-                    if sort_state['key'] == shortcuts[key]:
-                        sort_state['ascending'] = not sort_state['ascending']
-                    else:
-                        sort_state['key'] = shortcuts[key]
-                        sort_state['ascending'] = True
-                    live.update(render_layout())
+                    if key in shortcuts:
+                        if sort_state['key'] == shortcuts[key]:
+                            sort_state['ascending'] = not sort_state['ascending']
+                        else:
+                            sort_state['key'] = shortcuts[key]
+                            sort_state['ascending'] = True
+                        live.update(render_layout())
             except KeyboardInterrupt:
                 clear_terminal()
                 return
