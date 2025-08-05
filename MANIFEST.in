@@ -3,8 +3,8 @@ include README.md
 include requirements.txt
 include LICENSE*
 
-# Include documentation
-recursive-include docs *.md *.png *.jpg *.jpeg *.gif
+# Documentation excluded from PyPI package (available on GitHub)
+# recursive-include docs *.md *.png *.jpg *.jpeg *.gif
 
 # Exclude build artifacts and development files
 # Exclude development and build files
