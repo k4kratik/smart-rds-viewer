@@ -23,7 +23,7 @@ We welcome contributions of all kinds:
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/your-username/smart-rds-viewer.git
+   git clone https://github.com/k4kratik/smart-rds-viewer.git
    cd smart-rds-viewer
    ```
 
