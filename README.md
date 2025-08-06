@@ -52,12 +52,11 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 ### 💰 **Reserved Instance (RI) Analysis**
 
-- **Automatic RI Discovery**: Fetches all active Reserved Instances from your AWS account
-- **Size Flexibility Matching**: Handles AWS RDS instance size flexibility within families
-- **Coverage Analysis**: Shows which instances are fully/partially covered by RIs
-- **Cost Optimization**: Calculates actual savings from RI investments
-- **Utilization Tracking**: Displays RI utilization rates and unused capacity
-- **Visual Indicators**: Color-coded instance names based on RI coverage (Green=covered, Yellow=partial, Default=uncovered)
+- **Comprehensive RI Support**: Automatic RI discovery with size flexibility matching
+- **Cost Optimization**: Real-time coverage analysis and savings calculations
+- **Visual Indicators**: Color-coded instance names based on RI coverage
+
+> 📖 **Detailed RI Documentation**: See [docs/RESERVED-INSTANCES.md](docs/RESERVED-INSTANCES.md) for complete RI feature documentation, size flexibility algorithms, and implementation details.
 
 ## 🛠️ Installation
 
@@ -223,98 +222,36 @@ The AI assistant helped transform a simple concept into a comprehensive, product
 
 ## 📁 Project Structure
 
-```text
-smart-rds-viewer/
-├── __main__.py               # Entry point
-├── rds_viewer.py             # Main application logic
-├── ui.py                     # Rich terminal UI components
-├── fetch.py                  # RDS data fetching (optimized)
-├── metrics.py                # CloudWatch metrics (batch API)
-├── pricing.py                # AWS Pricing API (parallelized)
-├── reserved_instances.py     # Reserved Instance analysis
-├── requirements.txt          # Python dependencies
-├── pyproject.toml            # Package configuration
-├── Makefile                  # Build automation
-├── README.md                 # Project documentation
-├── LICENSE                   # MIT License
-├── CONTRIBUTING.md           # Contribution guidelines
-├── SECURITY.md               # Security policy
-├── CODE_OF_CONDUCT.md        # Code of conduct
-├── MANIFEST.in               # Package manifest
-├── docs/                     # Documentation & Images
-│   ├── BENCHMARKING.md       # Performance benchmarks
-│   ├── RESERVED-INSTANCES.md # RI feature documentation
-│   ├── IMPROVEMENTS-1.md     # Development history
-│   ├── PUBLISHING.md         # PyPI publishing guide
-│   ├── PYPI_SETUP.md         # PyPI setup guide
-│   ├── PRE-COMMIT-HOOK.md    # Git pre-commit hook setup
-│   ├── image.png             # Main demo screenshot
-│   ├── image-help.png        # Help menu screenshot
-│   ├── image-ri.png          # RI utilization screenshot
-│   └── smart-rds-viewer-logo.png # Project logo
-├── benchmarks/               # Performance Testing
-│   └── simple_benchmark.py   # Performance benchmarks
-└── scripts/                  # Developer Tools
-    ├── debug_pricing.py      # Pricing debugging script
-    └── inspect_pricing.py    # Pricing analysis tool
-```
+The project follows a modular architecture with separate modules for different concerns:
 
-### Performance Optimizations
+- **Core modules**: `rds_viewer.py`, `ui.py`, `fetch.py`, `metrics.py`, `pricing.py`
+- **Documentation**: Comprehensive docs in `docs/` directory
+- **Development tools**: Debug scripts in `scripts/` and performance benchmarks in `benchmarks/`
 
-The codebase includes significant performance optimizations:
+> 📖 **Performance Details**: See [docs/BENCHMARKING.md](docs/BENCHMARKING.md) for detailed performance optimizations, benchmarking results, and optimization techniques.
 
-- **Parallel API calls**: Pricing and metrics APIs run concurrently
-- **Connection pooling**: Reused HTTP connections across AWS services
-- **Batch CloudWatch requests**: Up to 100 metrics per API call
-- **Smart caching**: 24-hour pricing cache with intelligent invalidation
-- **Data filtering**: Reduces API response sizes by 80%+
+## 🛠️ Development & Contributing
 
-**Performance Results**: 72% faster than original (6.7s fresh, 1.6s cached)
+The project includes comprehensive development tools and documentation:
 
-## 🛠️ Developer Tools
+- **Debug Tools**: Pricing analysis and debugging scripts in `scripts/` directory
+- **Performance Testing**: Benchmarking tools in `benchmarks/` directory
+- **Development Setup**: Complete setup instructions and guidelines
 
-The project includes useful debugging and development tools:
-
-### Debug Scripts
-
-Located in the `scripts/` directory:
-
-- **`debug_pricing.py`**: Debug pricing functionality and see actual API responses
-
-  ```bash
-  python scripts/debug_pricing.py --nocache
-  ```
-
-- **`inspect_pricing.py`**: Analyze pricing data and API responses in detail
-
-### Additional Documentation
-
-- **[CONTRIBUTING.md](CONTRIBUTING.md)**: Contribution guidelines and development setup
-- **[SECURITY.md](SECURITY.md)**: Security policy and vulnerability reporting
-- **[docs/RESERVED-INSTANCES.md](docs/RESERVED-INSTANCES.md)**: Detailed RI feature documentation
-- **[docs/BENCHMARKING.md](docs/BENCHMARKING.md)**: Performance testing and results
-- **[docs/PUBLISHING.md](docs/PUBLISHING.md)**: PyPI publishing workflow
+> 📖 **Development Documentation**:
+>
+> - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines and development setup
+> - [docs/BENCHMARKING.md](docs/BENCHMARKING.md) - Performance testing and optimization
+> - [docs/PUBLISHING.md](docs/PUBLISHING.md) - PyPI publishing workflow
+> - [SECURITY.md](SECURITY.md) - Security policy and vulnerability reporting
 
 ## 📦 Publishing to PyPI
 
-For maintainers: To publish this package to PyPI so users can install with `pip install smart-rds-viewer`, see the detailed guide in [PUBLISHING.md](PUBLISHING.md).
-
-### Quick publishing workflow
-
-```bash
-# 1. Build package
-rm -rf dist/ && pip wheel . --no-deps -w dist/
-
-# 2. Test on TestPyPI
-twine upload --repository testpypi dist/smart_rds_viewer-*.whl
-
-# 3. Upload to PyPI
-twine upload dist/smart_rds_viewer-*.whl
-```
+For maintainers: To publish this package to PyPI, see the detailed publishing guide in [docs/PUBLISHING.md](docs/PUBLISHING.md) with complete workflows, testing procedures, and troubleshooting tips.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please feel free to submit issues, feature requests, or pull requests.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on development setup, code standards, and contribution workflows.
 
 ## 📄 License
 
