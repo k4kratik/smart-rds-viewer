@@ -50,13 +50,38 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 - **Complete Cost Breakdown**: Instance, Storage, IOPS, and EBS Throughput pricing
 - **Flexible Cost Views**: Toggle between hourly and monthly pricing with daily/monthly estimates
 
+### 💰 **Reserved Instance (RI) Analysis**
+
+- **Automatic RI Discovery**: Fetches all active Reserved Instances from your AWS account
+- **Size Flexibility Matching**: Handles AWS RDS instance size flexibility within families
+- **Coverage Analysis**: Shows which instances are fully/partially covered by RIs
+- **Cost Optimization**: Calculates actual savings from RI investments
+- **Utilization Tracking**: Displays RI utilization rates and unused capacity
+- **Visual Indicators**: Color-coded instance names based on RI coverage (Green=covered, Yellow=partial, Default=uncovered)
+
 ## 🛠️ Installation
 
 ### Prerequisites
 
 - Python 3.8+
 - AWS credentials configured (environment variables or IAM profile)
-- Required AWS permissions for RDS, CloudWatch, and Pricing APIs
+- Required AWS permissions for RDS, CloudWatch, Pricing, and Reserved Instance APIs
+
+### AWS Configuration
+
+Set your AWS profile and region (recommended):
+
+```bash
+export AWS_PROFILE=your-profile-name
+export AWS_REGION=your-region  # e.g., us-east-1, ap-south-1
+```
+
+**Required AWS Permissions:**
+
+- `rds:DescribeDBInstances` - Fetch RDS instance metadata
+- `cloudwatch:GetMetricStatistics` - Storage usage metrics
+- `pricing:GetProducts` - Live pricing data
+- `rds:DescribeReservedDBInstances` - Reserved Instance information
 
 ### Quick Start
 
@@ -131,6 +156,7 @@ python rds_viewer.py --nocache
 
 - **Sorting**: Press any column shortcut to sort
 - **Pricing View**: Press `m` to toggle between hourly and monthly costs
+- **RI View**: Press `u` to toggle Reserved Instance utilization table
 - **Help**: Press `?` to toggle help overlay
 - **Quit**: Press `q` or `Ctrl+C` to exit
 
@@ -151,6 +177,15 @@ python rds_viewer.py --nocache
 | `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`) |
 | `a` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)         |
 
+### Special Controls
+
+| Key | Function                      | Description                           |
+| --- | ----------------------------- | ------------------------------------- |
+| `m` | Pricing Toggle                | Switch between hourly/monthly view   |
+| `u` | RI Utilization                | Toggle Reserved Instance view         |
+| `?` | Help                          | Show/hide interactive help overlay    |
+| `q` | Quit                          | Exit application                      |
+
 ## 🔧 Technical Details
 
 ### Architecture
@@ -162,7 +197,7 @@ python rds_viewer.py --nocache
 
 ### AWS APIs Used
 
-- **RDS**: `describe_db_instances` for metadata
+- **RDS**: `describe_db_instances` for metadata, `describe_reserved_db_instances` for RI data
 - **CloudWatch**: `get_metric_statistics` for storage metrics
 - **Pricing**: `get_products` for live pricing data
 
@@ -188,7 +223,7 @@ The AI assistant helped transform a simple concept into a comprehensive, product
 
 ## 📁 Project Structure
 
-```
+```text
 smart-rds-viewer/
 ├── __main__.py               # Entry point
 ├── rds_viewer.py             # Main application logic
@@ -196,26 +231,32 @@ smart-rds-viewer/
 ├── fetch.py                  # RDS data fetching (optimized)
 ├── metrics.py                # CloudWatch metrics (batch API)
 ├── pricing.py                # AWS Pricing API (parallelized)
+├── reserved_instances.py     # Reserved Instance analysis
 ├── requirements.txt          # Python dependencies
 ├── pyproject.toml            # Package configuration
 ├── Makefile                  # Build automation
 ├── README.md                 # Project documentation
+├── LICENSE                   # MIT License
+├── CONTRIBUTING.md           # Contribution guidelines
+├── SECURITY.md               # Security policy
+├── CODE_OF_CONDUCT.md        # Code of conduct
+├── MANIFEST.in               # Package manifest
 ├── docs/                     # Documentation & Images
 │   ├── BENCHMARKING.md       # Performance benchmarks
-│   ├── HOMEBREW.md           # Homebrew installation guide
+│   ├── RESERVED-INSTANCES.md # RI feature documentation
 │   ├── IMPROVEMENTS-1.md     # Development history
+│   ├── PUBLISHING.md         # PyPI publishing guide
+│   ├── PYPI_SETUP.md         # PyPI setup guide
 │   ├── PRE-COMMIT-HOOK.md    # Git pre-commit hook setup
 │   ├── image.png             # Main demo screenshot
-│   └── image-help.png        # Help menu screenshot
-├── deployment/               # Deployment configs
-│   └── Formula/              # Homebrew formula
-│       └── smart-rds-viewer.rb
+│   ├── image-help.png        # Help menu screenshot
+│   ├── image-ri.png          # RI utilization screenshot
+│   └── smart-rds-viewer-logo.png # Project logo
 ├── benchmarks/               # Performance Testing
 │   └── simple_benchmark.py   # Performance benchmarks
-└── scripts/                  # Utility Scripts
-    ├── debug_pricing.py      # Pricing debugging
-    ├── inspect_pricing.py    # Pricing analysis
-    └── update-formula.rb     # Homebrew formula updates
+└── scripts/                  # Developer Tools
+    ├── debug_pricing.py      # Pricing debugging script
+    └── inspect_pricing.py    # Pricing analysis tool
 ```
 
 ### Performance Optimizations
@@ -230,11 +271,35 @@ The codebase includes significant performance optimizations:
 
 **Performance Results**: 72% faster than original (6.7s fresh, 1.6s cached)
 
+## 🛠️ Developer Tools
+
+The project includes useful debugging and development tools:
+
+### Debug Scripts
+
+Located in the `scripts/` directory:
+
+- **`debug_pricing.py`**: Debug pricing functionality and see actual API responses
+
+  ```bash
+  python scripts/debug_pricing.py --nocache
+  ```
+
+- **`inspect_pricing.py`**: Analyze pricing data and API responses in detail
+
+### Additional Documentation
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)**: Contribution guidelines and development setup
+- **[SECURITY.md](SECURITY.md)**: Security policy and vulnerability reporting
+- **[docs/RESERVED-INSTANCES.md](docs/RESERVED-INSTANCES.md)**: Detailed RI feature documentation
+- **[docs/BENCHMARKING.md](docs/BENCHMARKING.md)**: Performance testing and results
+- **[docs/PUBLISHING.md](docs/PUBLISHING.md)**: PyPI publishing workflow
+
 ## 📦 Publishing to PyPI
 
 For maintainers: To publish this package to PyPI so users can install with `pip install smart-rds-viewer`, see the detailed guide in [PUBLISHING.md](PUBLISHING.md).
 
-**Quick publishing workflow:**
+### Quick publishing workflow
 
 ```bash
 # 1. Build package
@@ -264,6 +329,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Happy RDS monitoring! 🎉**
+## Happy RDS monitoring! 🎉
 
 _Your terminal is now your RDS command center!_
