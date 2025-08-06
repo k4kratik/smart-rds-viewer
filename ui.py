@@ -311,12 +311,33 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
     def render_table(has_multi_az=False, blur=False):
         table = Table(title="Amazon RDS Instances", box=box.SIMPLE_HEAVY)
         
-        # Add columns dynamically
+        # Add columns dynamically with optimized widths
         columns = get_columns()
         for col in columns:
             if col['key'] == 'name':
                 # Name column with reduced width - more compact but readable
-                table.add_column(col['name'], justify=col['justify'], style="bold", min_width=18, no_wrap=True)
+                table.add_column(col['name'], justify=col['justify'], style="bold", min_width=14, max_width=22, no_wrap=True)
+            elif col['key'] == 'class':
+                # Class column with sufficient width to show full instance class names
+                table.add_column(col['name'], justify=col['justify'], min_width=12, max_width=16, no_wrap=True)
+            elif col['key'] == 'storage':
+                # Storage column - allow wrapping for header but keep data compact
+                table.add_column(col['name'], justify=col['justify'], min_width=8, max_width=10, no_wrap=False)
+            elif col['key'] == 'used_pct':
+                # Percentage column - very compact
+                table.add_column(col['name'], justify=col['justify'], min_width=6, max_width=8, no_wrap=False)
+            elif col['key'] == 'free_gb':
+                # Free GB column - allow wrapping for header
+                table.add_column(col['name'], justify=col['justify'], min_width=7, max_width=9, no_wrap=False)
+            elif col['key'] == 'iops':
+                # IOPS column - very compact
+                table.add_column(col['name'], justify=col['justify'], min_width=5, max_width=7, no_wrap=False)
+            elif col['key'] == 'storage_throughput':
+                # EBS Throughput column - compact, allow header wrapping
+                table.add_column(col['name'], justify=col['justify'], min_width=6, max_width=10, no_wrap=False)
+            elif col['key'] in ['instance_price', 'storage_price', 'iops_price', 'throughput_price', 'total_price', 'ri_savings']:
+                # Price columns - compact but readable, allow header wrapping
+                table.add_column(col['name'], justify=col['justify'], min_width=7, max_width=10, no_wrap=False)
             else:
                 table.add_column(col['name'], justify=col['justify'], style="bold" if col['key'] == 'name' else "")
         
