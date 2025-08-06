@@ -3,16 +3,16 @@
 > **Your terminal companion for monitoring Amazon RDS instances with real-time data, pricing, and interactive insights!**
 
 <!-- markdownlint-disable MD033 -->
-<img src="docs/smart-rds-viewer-logo.png" alt="Smart RDS Viewer" width="100">
+<img src="https://github.com/k4kratik/smart-rds-viewer/raw/main/docs/smart-rds-viewer-logo.png" alt="Smart RDS Viewer" width="100">
 <!-- markdownlint-enable MD033 -->
 
 A powerful, full-screen terminal CLI that fetches and displays all your Amazon RDS instances with live metrics, pricing, and interactive sorting - all from the comfort of your terminal.
 
-![Smart RDS Viewer Demo](docs/image.png)
+![Smart RDS Viewer Demo](https://github.com/k4kratik/smart-rds-viewer/raw/main/docs/image.png)
 
-![Smart RDS Viewer Demo - Help Menu](docs/image-help.png)
+![Smart RDS Viewer Demo - Help Menu](https://github.com/k4kratik/smart-rds-viewer/raw/main/docs/image-help.png)
 
-![Smart RDS Viewer Demo - RI Utilization](docs/image-ri.png)
+![Smart RDS Viewer Demo - RI Utilization](https://github.com/k4kratik/smart-rds-viewer/raw/main/docs/image-ri.png)
 
 ## ✨ Features
 
@@ -178,12 +178,12 @@ python rds_viewer.py --nocache
 
 ### Special Controls
 
-| Key | Function                      | Description                           |
-| --- | ----------------------------- | ------------------------------------- |
-| `m` | Pricing Toggle                | Switch between hourly/monthly view   |
-| `u` | RI Utilization                | Toggle Reserved Instance view         |
-| `?` | Help                          | Show/hide interactive help overlay    |
-| `q` | Quit                          | Exit application                      |
+| Key | Function       | Description                        |
+| --- | -------------- | ---------------------------------- |
+| `m` | Pricing Toggle | Switch between hourly/monthly view |
+| `u` | RI Utilization | Toggle Reserved Instance view      |
+| `?` | Help           | Show/hide interactive help overlay |
+| `q` | Quit           | Exit application                   |
 
 ## 🔧 Technical Details
 
