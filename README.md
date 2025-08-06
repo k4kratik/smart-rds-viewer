@@ -1,6 +1,10 @@
-# 🚀 Smart RDS Viewer
+# Smart RDS Viewer
 
 > **Your terminal companion for monitoring Amazon RDS instances with real-time data, pricing, and interactive insights!**
+
+<!-- markdownlint-disable MD033 -->
+<img src="docs/smart-rds-viewer-logo.png" alt="Smart RDS Viewer" width="100">
+<!-- markdownlint-enable MD033 -->
 
 A powerful, full-screen terminal CLI that fetches and displays all your Amazon RDS instances with live metrics, pricing, and interactive sorting - all from the comfort of your terminal.
 
@@ -9,7 +13,6 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 ![Smart RDS Viewer Demo - Help Menu](docs/image-help.png)
 
 ![Smart RDS Viewer Demo - RI Utilization](docs/image-ri.png)
-
 
 ## ✨ Features
 
@@ -133,20 +136,20 @@ python rds_viewer.py --nocache
 
 ### Column Shortcuts (Auto-assigned, match table order)
 
-| Key | Column                        | Description                            |
-| --- | ----------------------------- | -------------------------------------- |
+| Key | Column                        | Description                           |
+| --- | ----------------------------- | ------------------------------------- |
 | `n` | Name                          | Instance identifier (👥 = Multi-AZ)   |
 | `c` | Class                         | Instance type (db.r5.large, etc.)     |
-| `s` | Storage (GB)                  | Allocated storage                      |
-| `u` | % Used                        | Storage utilization percentage         |
-| `f` | Free (GiB)                    | Available storage space                |
-| `i` | IOPS                          | Provisioned IOPS                       |
-| `e` | EBS Throughput                | Storage throughput (MB/s)              |
-| `t` | Instance ($/hr or $/mo)       | Instance pricing (toggles with `m`)    |
-| `o` | Storage ($/hr or $/mo)        | Storage pricing (toggles with `m`)     |
-| `p` | IOPS ($/hr or $/mo)           | IOPS pricing (toggles with `m`)        |
-| `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`)  |
-| `a` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)          |
+| `s` | Storage (GB)                  | Allocated storage                     |
+| `u` | % Used                        | Storage utilization percentage        |
+| `f` | Free (GiB)                    | Available storage space               |
+| `i` | IOPS                          | Provisioned IOPS                      |
+| `e` | EBS Throughput                | Storage throughput (MB/s)             |
+| `t` | Instance ($/hr or $/mo)       | Instance pricing (toggles with `m`)   |
+| `o` | Storage ($/hr or $/mo)        | Storage pricing (toggles with `m`)    |
+| `p` | IOPS ($/hr or $/mo)           | IOPS pricing (toggles with `m`)       |
+| `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`) |
+| `a` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)         |
 
 ## 🔧 Technical Details
 
@@ -232,6 +235,7 @@ The codebase includes significant performance optimizations:
 For maintainers: To publish this package to PyPI so users can install with `pip install smart-rds-viewer`, see the detailed guide in [PUBLISHING.md](PUBLISHING.md).
 
 **Quick publishing workflow:**
+
 ```bash
 # 1. Build package
 rm -rf dist/ && pip wheel . --no-deps -w dist/
