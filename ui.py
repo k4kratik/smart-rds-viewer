@@ -267,7 +267,7 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
                 help_items.append((key, col_name_clean))
         
         # Start building the help text
-        help_text = "📋 [bold white]Current Key Mappings[/bold white]\n\n"
+        help_text = "📋 [bold white]Current Key Mappings to Sort Table[/bold white]\n\n"
         
         # Arrange in 3-column grid format (similar to the image)
         items_per_row = 3
@@ -311,7 +311,7 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
     def render_table(has_multi_az=False, blur=False):
         table = Table(title="Amazon RDS Instances", box=box.SIMPLE_HEAVY)
         
-        # Add columns dynamically with optimized widths
+        # Add columns dynamically with optimized widthsCur
         columns = get_columns()
         for col in columns:
             if col['key'] == 'name':
