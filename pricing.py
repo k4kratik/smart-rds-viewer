@@ -332,7 +332,7 @@ def parse_pricing_components(pricing_data, instance_class, storage_type, allocat
     }
 
 
-def parse_pricing_components_v2(instance_data, storage_data, iops_data, throughput_data, instance_class, storage_type, allocated_storage, iops, storage_throughput):
+def parse_pricing_components_v2(instance_data, storage_data, iops_data, throughput_data, instance_class, storage_type, allocated_storage, iops, storage_throughput, is_multi_az=False):
     """Parse pricing data from separate datasets for instance, storage, IOPS, and throughput costs."""
     instance_price = 0
     storage_cost_monthly = 0
@@ -344,9 +344,16 @@ def parse_pricing_components_v2(instance_data, storage_data, iops_data, throughp
         item_instance_type = item.get("InstanceType", "")
         price_str = item.get("Price (USD)", "0")
         unit = item.get("Unit", "").lower()
+        usage_type = item.get("UsageType", "").lower()
+        deployment_option = item.get("DeploymentOption", "")
+        
+        # Filter for correct deployment type (Single-AZ vs Multi-AZ)
+        is_single_az = "multi-az" not in usage_type and "multi-azcluster" not in usage_type
+        deployment_matches = (is_multi_az and not is_single_az) or (not is_multi_az and is_single_az)
         
         if (item_instance_type == instance_class and 
             ("hour" in unit or "hrs" in unit) and
+            deployment_matches and
             price_str != "N/A" and price_str):
             try:
                 price = float(price_str)
@@ -554,11 +561,12 @@ def fetch_pricing_for_region_engine(region, engine, instances):
             allocated_storage = inst.get("AllocatedStorage", 0)
             iops = inst.get("Iops", 0)
             storage_throughput = inst.get("StorageThroughput", 0)
+            is_multi_az = inst.get("MultiAZ", False)
             
             # Parse pricing components using separate datasets
             price_breakdown = parse_pricing_components_v2(
                 instance_pricing_data, storage_pricing_data, iops_pricing_data, throughput_pricing_data,
-                instance_class, storage_type, allocated_storage, iops, storage_throughput
+                instance_class, storage_type, allocated_storage, iops, storage_throughput, is_multi_az
             )
             
             # Use instance identifier as key to prevent overwriting instances with same class
