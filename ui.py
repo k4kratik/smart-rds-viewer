@@ -189,6 +189,10 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
                     total_price = price_info
                     ri_savings = 0
                     display_name = base_display_name
+            else:
+                # Handle case when price_info is None
+                ri_savings = 0
+                display_name = base_display_name
             
             # For Multi-AZ instances, double the instance price (AWS charges 2x for Multi-AZ)
             if is_multi_az and instance_price is not None and isinstance(instance_price, (int, float)):
