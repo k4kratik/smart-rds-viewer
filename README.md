@@ -41,6 +41,7 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 - **Pricing Toggle**: Press `m` to switch between hourly and monthly cost views
 - **Help System**: Press `?` for interactive help overlay
 - **Clean Exit**: `q` or `Ctrl+C` to exit with terminal cleanup
+- **Arrow Key Navigation**: Use `←`/`→` or `Tab`/`Shift+Tab` for seamless tab cycling
 
 ### 📈 **Comprehensive Metrics**
 
@@ -155,7 +156,7 @@ python rds_viewer.py --nocache
 
 - **Sorting**: Press any column shortcut to sort
 - **Pricing View**: Press `m` to toggle between hourly and monthly costs
-- **RI View**: Press `u` to toggle Reserved Instance utilization table
+- **RI View**: Press `v` to toggle Reserved Instance utilization table
 - **Help**: Press `?` to toggle help overlay
 - **Quit**: Press `q` or `Ctrl+C` to exit
 
@@ -181,9 +182,18 @@ python rds_viewer.py --nocache
 | Key | Function       | Description                        |
 | --- | -------------- | ---------------------------------- |
 | `m` | Pricing Toggle | Switch between hourly/monthly view |
-| `u` | RI Utilization | Toggle Reserved Instance view      |
+| `v` | RI Utilization | Toggle Reserved Instance view      |
 | `?` | Help           | Show/hide interactive help overlay |
 | `q` | Quit           | Exit application                   |
+
+### Navigation Controls
+
+| Key | Function     | Description                           |
+| --- | ------------ | ------------------------------------- |
+| `←` | Previous Tab | Cycle to previous view (infinite)     |
+| `→` | Next Tab     | Cycle to next view (infinite)         |
+| `Tab` | Cycle Forward | Navigate between Main/RI views       |
+| `Shift+Tab` | Cycle Backward | Navigate between Main/RI views    |
 
 ## 🔧 Technical Details
 

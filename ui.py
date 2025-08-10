@@ -17,6 +17,18 @@ def clear_terminal():
     """Clear the terminal screen."""
     os.system('clear' if os.name == 'posix' else 'cls')
 
+def setup_terminal_for_esc():
+    """Set up terminal to handle Esc key with minimal delay."""
+    # Note: ESCDELAY setting kept for future Esc key implementation
+    os.environ['ESCDELAY'] = '1'
+
+def get_key_simple():
+    """Simple key reading - back to basics."""
+    try:
+        return readchar.readkey()
+    except:
+        return None
+
 def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
     
     sort_state = {'key': 'name', 'ascending': True}
@@ -298,6 +310,10 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
         
         # Second row of special controls
         help_text += f"  [cyan]q[/cyan] → Quit{'':<20}[cyan]Ctrl+C[/cyan] → Exit\n"
+        
+        # Third row - navigation controls (only if RI data available)
+        if ri_matches:
+            help_text += f"  [cyan]←/→[/cyan] → Cycle Tabs{'':<13}[cyan]Tab[/cyan] → Cycle Tabs{'':<11}[cyan]Shift+Tab[/cyan] → Cycle Back\n"
         
         # Visual indicators section
         if ri_matches or has_multi_az:
@@ -794,35 +810,62 @@ def display_rds_table(rds_instances, metrics, pricing, ri_matches=None):
         progress.add_task(description="Fetching and processing RDS data...", total=None)
         time.sleep(0.5)  # Simulate loading
 
+    # Set up terminal for better Esc key handling
+    setup_terminal_for_esc()
+    
     # Interactive table with full screen - maximum responsiveness
     with Live(render_layout(), refresh_per_second=4, console=console, screen=True) as live:
         controls_msg = "\nPress [bold]?[/bold] for help, [bold]m[/bold] to toggle monthly/hourly"
         if ri_matches:
-            controls_msg += ", [bold]v[/bold] for RI utilization"
+            controls_msg += ", [bold]v[/bold] for RI utilization, [bold]←/→[/bold] or [bold]Tab[/bold] to cycle tabs"
         controls_msg += ", [bold]q[/bold] to quit."
         console.print(controls_msg)
         while True:
             try:
-                key = readchar.readkey().lower()
-                if key in ['q', '\x03']:  # q or Ctrl+C
+                key = get_key_simple()
+                if key is None:
+                    continue
+                
+                # Handle exit keys - only q and Q for now (Esc disabled temporarily)
+                if key in ['q', 'Q']:
                     clear_terminal()
                     return
+                # Handle special keys - check for readchar constants and raw sequences
+                elif ri_matches and (
+                    (hasattr(readchar.key, 'RIGHT') and key == readchar.key.RIGHT) or 
+                    key == '\x1b[C'
+                ):
+                    show_ri_table = not show_ri_table
+                    live.update(render_layout())
+                elif ri_matches and (
+                    (hasattr(readchar.key, 'LEFT') and key == readchar.key.LEFT) or 
+                    key == '\x1b[D'
+                ):
+                    show_ri_table = not show_ri_table
+                    live.update(render_layout())
+                elif ri_matches and key == '\t':  # Regular Tab
+                    show_ri_table = not show_ri_table
+                    live.update(render_layout())
+                elif ri_matches and key == '\x1b[Z':  # Shift+Tab (raw sequence)
+                    show_ri_table = not show_ri_table
+                    live.update(render_layout())
                 elif key == '?':
                     show_help = not show_help  # Toggle help
                     live.update(render_layout())
-                elif key == 'm':
+                elif key.lower() == 'm':
                     show_monthly = not show_monthly  # Toggle monthly/hourly view
                     live.update(render_layout())
-                elif key == 'v' and ri_matches:
+                elif key.lower() == 'v' and ri_matches:
                     show_ri_table = not show_ri_table  # Toggle RI utilization table
                     live.update(render_layout())
                 else:
                     shortcuts = assign_shortcuts()
-                    if key in shortcuts:
-                        if sort_state['key'] == shortcuts[key]:
+                    key_lower = key.lower()
+                    if key_lower in shortcuts:
+                        if sort_state['key'] == shortcuts[key_lower]:
                             sort_state['ascending'] = not sort_state['ascending']
                         else:
-                            sort_state['key'] = shortcuts[key]
+                            sort_state['key'] = shortcuts[key_lower]
                             sort_state['ascending'] = True
                         live.update(render_layout())
             except KeyboardInterrupt:
