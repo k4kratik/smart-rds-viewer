@@ -4,6 +4,7 @@ from fetch import fetch_rds_instances, validate_aws_credentials
 from metrics import fetch_storage_metrics
 from pricing import fetch_rds_pricing
 from reserved_instances import fetch_reserved_instances, match_reserved_instances, calculate_effective_pricing
+from backup_maintenance import fetch_backup_maintenance_data
 from ui import display_rds_table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -41,7 +42,9 @@ def main():
         progress.add_task(description="Calculating RI matches and effective pricing...", total=None)
         ri_matches = match_reserved_instances(rds_instances, reserved_instances)
         effective_pricing = calculate_effective_pricing(pricing, ri_matches)
-    display_rds_table(rds_instances, metrics, effective_pricing, ri_matches)
+        progress.add_task(description="Fetching backup and maintenance data...", total=None)
+        backup_data, maintenance_data = fetch_backup_maintenance_data(rds_instances)
+    display_rds_table(rds_instances, metrics, effective_pricing, ri_matches, backup_data, maintenance_data)
 
 if __name__ == "__main__":
     main()

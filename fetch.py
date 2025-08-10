@@ -69,6 +69,12 @@ def fetch_rds_instances():
                     'IsAurora': is_aurora,
                     'DBClusterIdentifier': db.get('DBClusterIdentifier') if is_aurora else None,
                     'MultiAZ': db.get('MultiAZ', False),
+                    # Add backup and maintenance fields
+                    'PreferredBackupWindow': db.get('PreferredBackupWindow'),
+                    'BackupRetentionPeriod': db.get('BackupRetentionPeriod'),
+                    'BackupTarget': db.get('BackupTarget'),
+                    'PreferredMaintenanceWindow': db.get('PreferredMaintenanceWindow'),
+                    'AutoMinorVersionUpgrade': db.get('AutoMinorVersionUpgrade'),
                 })
     except (BotoCoreError, ClientError) as e:
         print(f"Error fetching RDS instances: {e}")
