@@ -237,10 +237,14 @@ def calculate_next_maintenance_time(maintenance_window: str) -> Optional[str]:
     except (ValueError, IndexError) as e:
         return None
 
-def format_backup_window_display(backup_window: str) -> str:
-    """Format backup window for display in local timezone."""
+def format_backup_window_display(backup_window: str, use_utc: bool = False) -> str:
+    """Format backup window for display in UTC or local timezone."""
     if not backup_window or backup_window == 'Not set':
         return 'Not set'
+    
+    if use_utc:
+        # Display in UTC format
+        return f"{backup_window} UTC"
     
     try:
         # Convert from HH:MM-HH:MM to local timezone
@@ -255,10 +259,30 @@ def format_backup_window_display(backup_window: str) -> str:
     except:
         return backup_window
 
-def format_maintenance_window_display(maintenance_window: str) -> str:
-    """Format maintenance window for display in local timezone."""
+def format_maintenance_window_display(maintenance_window: str, use_utc: bool = False) -> str:
+    """Format maintenance window for display in UTC or local timezone."""
     if not maintenance_window or maintenance_window == 'Not set':
         return 'Not set'
+    
+    if use_utc:
+        # Display in UTC format, capitalize day name
+        try:
+            window_parts = maintenance_window.split('-')
+            start_part = window_parts[0].strip()
+            end_part = window_parts[1].strip()
+            
+            # Extract day and time from start
+            start_day_time = start_part.split(':')
+            start_day = start_day_time[0].capitalize()
+            start_time = f"{start_day_time[1]}:{start_day_time[2]}"
+            
+            # Extract time from end
+            end_day_time = end_part.split(':')
+            end_time = f"{end_day_time[1]}:{end_day_time[2]}"
+            
+            return f"{start_day} {start_time}-{end_time} UTC"
+        except:
+            return f"{maintenance_window} UTC"
     
     try:
         # Convert from day:hh:mm-day:hh:mm to local timezone

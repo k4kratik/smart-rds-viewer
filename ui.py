@@ -369,6 +369,7 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
     sort_state = {'key': 'name', 'ascending': True}
     show_help = False
     show_monthly = False  # Toggle between hourly and monthly view
+    show_utc_time = False  # Toggle between UTC and local timezone for backup/maintenance view
     current_view = 'instances'  # Three views: 'instances', 'ri_utilization', 'backup_maintenance'
     
     def get_columns():
@@ -704,6 +705,11 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
         
         # Other controls
         help_text += f"  [cyan]?[/cyan] → Help{'':<20}[cyan]m[/cyan] → Monthly/Hourly{'':<12}[cyan]q[/cyan] → Quit\n"
+        
+        # Timezone toggle (only show in backup view)
+        if current_view == 'backup_maintenance':
+            current_tz = "UTC" if show_utc_time else "Local"
+            help_text += f"  [cyan]t[/cyan] → Timezone Toggle (Currently: {current_tz})\n"
         
         # Visual indicators section
         if ri_matches or has_multi_az:
@@ -1126,9 +1132,9 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
                 'class': klass,
                 'engine': engine,
                 'storage': storage if not is_aurora else "Aurora",
-                'backup_window': format_backup_window_display(backup_info.get('backup_window', 'Not set')),
+                'backup_window': format_backup_window_display(backup_info.get('backup_window', 'Not set'), use_utc=show_utc_time),
                 'backup_retention': f"{backup_info.get('backup_retention_period', 0)}d" if backup_info.get('backup_retention_period', 0) > 0 else "Disabled",
-                'maintenance_window': format_maintenance_window_display(maintenance_info.get('maintenance_window', 'Not set')),
+                'maintenance_window': format_maintenance_window_display(maintenance_info.get('maintenance_window', 'Not set'), use_utc=show_utc_time),
                 'next_maintenance': get_next_maintenance_status(maintenance_info.get('next_maintenance_time')),
                 'pending_actions': format_pending_actions_display(maintenance_info.get('pending_actions', [])),
                 'is_aurora': is_aurora,
@@ -1437,6 +1443,10 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
                 elif key == 'm':  # Lowercase m for monthly toggle
                     show_monthly = not show_monthly  # Toggle monthly/hourly view
                     live.update(render_layout())
+                elif key == 't':  # Lowercase t for timezone toggle (only in backup view)
+                    if current_view == 'backup_maintenance':
+                        show_utc_time = not show_utc_time  # Toggle UTC/local timezone
+                        live.update(render_layout())
                 elif key == 'V':  # Capital V for pricing view
                     current_view = 'instances'  # Direct to pricing view
                     live.update(render_layout())
