@@ -320,8 +320,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Powered by [boto3](https://github.com/boto/boto3) for AWS integration
 - Inspired by modern CLI tools like `eks-node-viewer`
 - **AI Development Partner**: Claude Sonnet 4 for collaborative coding and problem-solving
-- @sachincool for cool logo
-- @kutumbtech for everything 🙏
+- [@sachincool](https://github.com/sachincool) for the cool logo 🫡
+- [@kutumbtech](https://github.com/kutumbtech) for everything 🙏
 
 ---
 
