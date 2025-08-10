@@ -38,7 +38,8 @@ dependencies = [
     "boto3",
     "rich",
     "typer",
-    "readchar"
+    "readchar",
+    "pytz"
 ]
 
 [project.urls]
@@ -52,7 +53,7 @@ smart-rds-viewer = "rds_viewer:main"
 rds-viewer = "rds_viewer:main"
 
 [tool.setuptools]
-py-modules = ["rds_viewer", "fetch", "metrics", "pricing", "reserved_instances", "ui"]
+py-modules = ["rds_viewer", "fetch", "metrics", "pricing", "reserved_instances", "ui", "backup_maintenance"]
 
 [tool.setuptools.packages.find]
 where = ["."]

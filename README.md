@@ -16,6 +16,15 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 ## ✨ Features
 
+- **🔧 Backup & Maintenance View**: Complete operational monitoring with backup windows, retention policies, and maintenance schedules
+- **🎯 Smart Column Sorting**: Intuitive 1-9 then a-z shortcuts with visual indicators for active sort column and direction
+- **🎨 Visual Sort Feedback**: Colorful underlines and directional arrows show exactly what's being sorted and how
+- **📏 Dynamic Responsive Design**: Adaptive column widths that automatically optimize for your terminal size
+- **🕐 Intelligent Time Handling**: Local timezone conversion and chronological sorting for time-based columns
+- **⚡ Enhanced Performance**: Optimized sorting algorithms for numeric, time-based, and special value handling
+
+## ✨ Core Features
+
 ### 🔍 **Real-time Data Fetching**
 
 - **RDS Metadata**: Fetches all RDS instances using `boto3`
@@ -34,14 +43,18 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 
 ### 🎮 **Interactive Controls**
 
-- **Dynamic Shortcuts**: Auto-assigned lowercase keys matching table column order
-  - `n` = Name, `c` = Class, `s` = Storage, `u` = % Used
-  - `f` = Free, `i` = IOPS, `e` = Throughput, `t`/`o`/`p`/`h`/`a` = Pricing columns
-- **Smart Sorting**: Toggle ascending/descending with same key
+- **Intuitive Shortcuts**: Simple 1-9 then a-z keys for column sorting (1=Name, 2=Class, etc.)
+- **Visual Sort Indicators**: Colorful underlines and arrows (↑↓) show active sort column and direction
+- **Smart Sorting**: Toggle ascending/descending with same key, handles time-based and numeric data intelligently
+- **Multi-View Interface**: Three integrated views accessible via keyboard shortcuts
+  - **Pricing View** (`V`): Cost analysis with hourly/monthly toggle
+  - **Backup & Maintenance View** (`B`): Backup windows, retention, maintenance schedules
+  - **RI Utilization View** (`R`): Reserved Instance coverage and utilization
+- **Dynamic Spacing**: Responsive column widths that adapt to terminal size
 - **Pricing Toggle**: Press `m` to switch between hourly and monthly cost views
-- **Help System**: Press `?` for interactive help overlay
+- **Help System**: Press `?` for interactive help overlay with context-aware shortcuts
 - **Clean Exit**: `q` or `Ctrl+C` to exit with terminal cleanup
-- **Arrow Key Navigation**: Use `←`/`→` or `Tab`/`Shift+Tab` for seamless tab cycling
+- **Arrow Key Navigation**: Use `←`/`→` or `Tab`/`Shift+Tab` for seamless view cycling
 
 ### 📈 **Comprehensive Metrics**
 
@@ -50,6 +63,8 @@ A powerful, full-screen terminal CLI that fetches and displays all your Amazon R
 - **Performance**: IOPS, EBS throughput (with GP2/GP3 awareness)
 - **Complete Cost Breakdown**: Instance, Storage, IOPS, and EBS Throughput pricing
 - **Flexible Cost Views**: Toggle between hourly and monthly pricing with daily/monthly estimates
+- **Backup & Maintenance**: Backup windows, retention periods, maintenance schedules with local timezone display
+- **Operational Insights**: Next maintenance timing, pending actions, and maintenance urgency indicators
 
 ### 💰 **Reserved Instance (RI) Analysis**
 
@@ -79,9 +94,10 @@ export AWS_REGION=your-region  # e.g., us-east-1, ap-south-1
 **Required AWS Permissions:**
 
 - `rds:DescribeDBInstances` - Fetch RDS instance metadata
+- `rds:DescribeReservedDBInstances` - Reserved Instance information
+- `rds:DescribePendingMaintenanceActions` - Maintenance and backup information
 - `cloudwatch:GetMetricStatistics` - Storage usage metrics
 - `pricing:GetProducts` - Live pricing data
-- `rds:DescribeReservedDBInstances` - Reserved Instance information
 
 ### Quick Start
 
@@ -154,46 +170,77 @@ python rds_viewer.py --nocache
 
 ### Interactive Controls
 
-- **Sorting**: Press any column shortcut to sort
-- **Pricing View**: Press `m` to toggle between hourly and monthly costs
-- **RI View**: Press `v` to toggle Reserved Instance utilization table
-- **Help**: Press `?` to toggle help overlay
+- **Column Sorting**: Press number keys (1-9) then letters (a-z) to sort by any column
+- **Visual Feedback**: Active sort column shows colorful underline and direction arrows (↑↓)
+- **View Navigation**:
+  - `Shift+V` - Pricing View (main cost analysis)
+  - `Shift+B` - Backup & Maintenance View
+  - `Shift+R` - Reserved Instance Utilization View
+- **Pricing Toggle**: Press `m` to switch between hourly and monthly costs
+- **Help**: Press `?` to toggle context-aware help overlay
 - **Quit**: Press `q` or `Ctrl+C` to exit
 
-### Column Shortcuts (Auto-assigned, match table order)
+### Column Shortcuts (Consistent across all views)
+
+#### Pricing View
 
 | Key | Column                        | Description                           |
 | --- | ----------------------------- | ------------------------------------- |
-| `n` | Name                          | Instance identifier (👥 = Multi-AZ)   |
-| `c` | Class                         | Instance type (db.r5.large, etc.)     |
-| `s` | Storage (GB)                  | Allocated storage                     |
-| `u` | % Used                        | Storage utilization percentage        |
-| `f` | Free (GiB)                    | Available storage space               |
-| `i` | IOPS                          | Provisioned IOPS                      |
-| `e` | EBS Throughput                | Storage throughput (MB/s)             |
-| `t` | Instance ($/hr or $/mo)       | Instance pricing (toggles with `m`)   |
-| `o` | Storage ($/hr or $/mo)        | Storage pricing (toggles with `m`)    |
-| `p` | IOPS ($/hr or $/mo)           | IOPS pricing (toggles with `m`)       |
-| `h` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`) |
-| `a` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)         |
+| `1` | Name                          | Instance identifier (👥 = Multi-AZ)   |
+| `2` | Class                         | Instance type (db.r5.large, etc.)     |
+| `3` | Storage (GB)                  | Allocated storage                     |
+| `4` | % Used                        | Storage utilization percentage        |
+| `5` | Free (GiB)                    | Available storage space               |
+| `6` | IOPS                          | Provisioned IOPS                      |
+| `7` | EBS Throughput                | Storage throughput (MB/s)             |
+| `8` | Instance ($/hr or $/mo)       | Instance pricing (toggles with `m`)   |
+| `9` | Storage ($/hr or $/mo)        | Storage pricing (toggles with `m`)    |
+| `a` | IOPS ($/hr or $/mo)           | IOPS pricing (toggles with `m`)       |
+| `b` | EBS Throughput ($/hr or $/mo) | Throughput pricing (toggles with `m`) |
+| `c` | Total ($/hr or $/mo)          | Total cost (toggles with `m`)         |
+
+#### Backup & Maintenance View
+
+| Key | Column             | Description                          |
+| --- | ------------------ | ------------------------------------ |
+| `1` | Name               | Instance identifier (👥 = Multi-AZ)  |
+| `2` | Class              | Instance type                        |
+| `3` | Engine             | Database engine (MySQL, PostgreSQL)  |
+| `4` | Storage            | Allocated storage                    |
+| `5` | Backup Window      | Daily backup time window (local TZ)  |
+| `6` | Retention          | Backup retention period (days)       |
+| `7` | Maintenance Window | Weekly maintenance window (local TZ) |
+| `8` | Next               | Next maintenance timing              |
+| `9` | Pending Actions    | Pending maintenance actions          |
 
 ### Special Controls
 
-| Key | Function       | Description                        |
-| --- | -------------- | ---------------------------------- |
-| `m` | Pricing Toggle | Switch between hourly/monthly view |
-| `v` | RI Utilization | Toggle Reserved Instance view      |
-| `?` | Help           | Show/hide interactive help overlay |
-| `q` | Quit           | Exit application                   |
+| Key       | Function       | Description                        |
+| --------- | -------------- | ---------------------------------- |
+| `m`       | Pricing Toggle | Switch between hourly/monthly view |
+| `Shift+V` | Pricing View   | Go to main pricing/cost view       |
+| `Shift+B` | Backup View    | Go to backup & maintenance view    |
+| `Shift+R` | RI View        | Go to Reserved Instance view       |
+| `?`       | Help           | Show/hide interactive help overlay |
+| `q`       | Quit           | Exit application                   |
 
 ### Navigation Controls
 
-| Key | Function     | Description                           |
-| --- | ------------ | ------------------------------------- |
-| `←` | Previous Tab | Cycle to previous view (infinite)     |
-| `→` | Next Tab     | Cycle to next view (infinite)         |
-| `Tab` | Cycle Forward | Navigate between Main/RI views       |
-| `Shift+Tab` | Cycle Backward | Navigate between Main/RI views    |
+| Key         | Function       | Description                         |
+| ----------- | -------------- | ----------------------------------- |
+| `←`         | Previous Tab   | Cycle to previous view (infinite)   |
+| `→`         | Next Tab       | Cycle to next view (infinite)       |
+| `Tab`       | Cycle Forward  | Navigate between views sequentially |
+| `Shift+Tab` | Cycle Backward | Navigate between views in reverse   |
+
+### Visual Indicators
+
+- **🔵 Cyan Underline ↑**: Column sorted ascending
+- **🟣 Magenta Underline ↓**: Column sorted descending
+- **👥**: Multi-AZ instance (2x pricing)
+- **🟢 Green**: Low urgency maintenance (>7 days)
+- **🟡 Yellow**: Medium urgency maintenance (1-7 days)
+- **🔴 Red**: High urgency maintenance (overdue/today)
 
 ## 🔧 Technical Details
 
@@ -206,7 +253,7 @@ python rds_viewer.py --nocache
 
 ### AWS APIs Used
 
-- **RDS**: `describe_db_instances` for metadata, `describe_reserved_db_instances` for RI data
+- **RDS**: `describe_db_instances` for metadata, `describe_reserved_db_instances` for RI data, `describe_pending_maintenance_actions` for maintenance info
 - **CloudWatch**: `get_metric_statistics` for storage metrics
 - **Pricing**: `get_products` for live pricing data
 
