@@ -281,6 +281,31 @@ def parse_next_maintenance_time(next_maintenance: str) -> int:
     # If we can't parse it, put it in the middle range
     return 500
 
+def parse_backup_retention_period(retention: str) -> int:
+    """
+    Parse backup retention period for sorting.
+    Returns priority score where lower numbers sort first.
+    
+    Examples:
+    - "Disabled" -> 0 (sort first - no retention)
+    - "1d" -> 1
+    - "7d" -> 7
+    - "30d" -> 30
+    """
+    if not retention or retention in ['Disabled', 'Not set', 'None']:
+        return 0  # Sort disabled/no retention first
+    
+    # Extract number of days from "Xd" format
+    try:
+        if retention.endswith('d'):
+            days_str = retention[:-1]  # Remove 'd'
+            return int(days_str)
+    except:
+        pass
+    
+    # If we can't parse it, put it at the end
+    return 9999
+
 def _sort_iops_value(iops_value):
     """
     Sort IOPS values in logical order:
@@ -347,17 +372,40 @@ def _sort_price_value(price_value):
             return (2, float('inf'))  # Unparseable values at end
 
 def get_column_header_with_sort_indicator(column_name: str, column_key: str, sort_state: dict) -> str:
-    """Add visual sorting indicator to column header."""
+    """Add visual sorting indicator to column header (no shortcut to prevent truncation)."""
+    # Add sort indicator if this column is being sorted
     if sort_state['key'] == column_key:
-        # Column is currently being sorted
         direction_arrow = "↑" if sort_state['ascending'] else "↓"
         if sort_state['ascending']:
             return f"[bold cyan underline]{column_name}[/bold cyan underline] [bright_cyan]{direction_arrow}[/bright_cyan]"
         else:
             return f"[bold magenta underline]{column_name}[/bold magenta underline] [bright_magenta]{direction_arrow}[/bright_magenta]"
     else:
-        # Regular column header
         return column_name
+
+def get_column_header_with_shortcut(column_name: str, column_key: str, sort_state: dict, shortcut_key: str = None) -> str:
+    """Create column header with shortcut indicator on a new line."""
+    # Create the base header with sort indicator
+    if sort_state['key'] == column_key:
+        direction_arrow = "↑" if sort_state['ascending'] else "↓"
+        if sort_state['ascending']:
+            header_line = f"[bold cyan underline]{column_name}[/bold cyan underline] [bright_cyan]{direction_arrow}[/bright_cyan]"
+        else:
+            header_line = f"[bold magenta underline]{column_name}[/bold magenta underline] [bright_magenta]{direction_arrow}[/bright_magenta]"
+    else:
+        header_line = column_name
+    
+    # Add shortcut on a new line
+    if shortcut_key:
+        if shortcut_key.isdigit():
+            shortcut_display = f"[dim bright_cyan]({shortcut_key})[/dim bright_cyan]"
+        else:
+            shortcut_display = f"[dim bright_cyan]({shortcut_key.upper()})[/dim bright_cyan]"
+        return f"{header_line}\n{shortcut_display}"
+    else:
+        return f"{header_line}\n[dim] [/dim]"  # Empty line for alignment
+
+
 
 def get_column_shortcuts():
     """Get simple number-based shortcuts (1-9) for columns based on position."""
@@ -626,7 +674,7 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
             
             # Backup view columns with time-aware sorting
             'backup_window': lambda r: parse_backup_window_time(r.get('backup_window', '') or ''),
-            'backup_retention': lambda r: r.get('backup_retention', '') or '',
+            'backup_retention': lambda r: parse_backup_retention_period(r.get('backup_retention', '') or ''),
             'maintenance_window': lambda r: parse_maintenance_window_time(r.get('maintenance_window', '') or ''),
             'next_maintenance': lambda r: parse_next_maintenance_time(r.get('next_maintenance', '') or ''),
             'pending_actions': lambda r: r.get('pending_actions', '') or '',
@@ -739,9 +787,14 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
         
         # Add columns dynamically with optimized widths and sorting indicators
         columns = get_columns()
+        shortcuts = get_shortcuts()
+        # Create reverse mapping of key -> shortcut
+        key_to_shortcut = {key: shortcut for shortcut, key in shortcuts.items()}
+        
         for col in columns:
-            # Get header with sort indicator
-            header_text = get_column_header_with_sort_indicator(col['name'], col['key'], sort_state)
+            # Get header with sort indicator and shortcut
+            shortcut_key = key_to_shortcut.get(col['key'])
+            header_text = get_column_header_with_shortcut(col['name'], col['key'], sort_state, shortcut_key)
             
             if current_view == 'backup_maintenance':
                 # Backup & Maintenance view - dynamic column widths based on terminal size
@@ -1103,8 +1156,13 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
             {'name': 'Pending Actions', 'key': 'pending_actions', 'justify': 'left', 'width_key': 'pending_actions'}
         ]
         
+        # Get shortcuts for current view
+        shortcuts = get_shortcuts()
+        key_to_shortcut = {key: shortcut for shortcut, key in shortcuts.items()}
+        
         for col in columns:
-            header_text = get_column_header_with_sort_indicator(col['name'], col['key'], sort_state)
+            shortcut_key = key_to_shortcut.get(col['key'])
+            header_text = get_column_header_with_shortcut(col['name'], col['key'], sort_state, shortcut_key)
             style = col.get('style', None)
             no_wrap = col['key'] != 'pending_actions'  # Allow wrapping only for pending actions
             table.add_column(header_text, justify=col['justify'], style=style, 
@@ -1222,8 +1280,13 @@ def display_rds_table(rds_instances, metrics=None, pricing=None, ri_matches=None
             {'name': 'Expires', 'key': 'expires', 'justify': 'left', 'width_key': 'expires'}
         ]
         
+        # Get shortcuts for current view
+        shortcuts = get_shortcuts()
+        key_to_shortcut = {key: shortcut for shortcut, key in shortcuts.items()}
+        
         for col in ri_columns:
-            header_text = get_column_header_with_sort_indicator(col['name'], col['key'], sort_state)
+            shortcut_key = key_to_shortcut.get(col['key'])
+            header_text = get_column_header_with_shortcut(col['name'], col['key'], sort_state, shortcut_key)
             style = col.get('style', None)
             table.add_column(header_text, justify=col['justify'], style=style, width=widths[col['width_key']])
         
